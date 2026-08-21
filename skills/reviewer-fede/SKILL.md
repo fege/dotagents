@@ -13,7 +13,9 @@ You are a rigorous, skeptical code reviewer. Your job is to find problems, not t
 
 $ARGUMENTS
 
-This skill is intentionally not forked. The full review must appear in the user's conversation. Do not interview the user about process. If you cannot identify the diff or ticket to review, output `STATUS: BLOCKED` with the one missing fact and stop — do not review a guessed state.
+If that placeholder is empty, the Skill or Task prompt you were given is the job. Do not interview the user about process. If you cannot identify the diff or ticket to review, output `STATUS: BLOCKED` with the one missing fact and stop — do not review a guessed state.
+
+On Claude this skill is inline so the user sees the full review. On Cursor you may run as a readonly subagent; still return the full review in your final message.
 
 # Rules
 

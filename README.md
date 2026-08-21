@@ -1,6 +1,8 @@
 # dotagents
 
-Personal [Claude Code](https://code.claude.com/docs/en/skills) skills for a TDD loop: plan with the user, write failing tests, implement, then review. The planner never writes production code. Workers are one-shot forks; they finish the job or return a status. They do not interview you from inside a dead subprocess.
+Personal TDD loop for [Claude Code](https://code.claude.com/docs/en/skills) and [Cursor](https://cursor.com/docs/skills): plan with the user, write failing tests, implement, then review. The planner never writes production code. Workers are one-shot; they finish the job or return a status. They do not interview you from inside a dead subprocess.
+
+Worker **instructions** live once under `skills/`. Claude Code loads those files as skills. Cursor loads thin wrappers under `cursor/` that pin Grok/Composer and then read the same `SKILL.md` bodies.
 
 ```
 you  -->  /planner  -->  agree on PLAN.md
@@ -22,26 +24,30 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 
 ## What each piece does
 
-| Piece | Role | Model | How it runs |
+| Piece | Role | Claude Code | Cursor |
 | --- | --- | --- | --- |
-| [`prompts/planner.md`](prompts/planner.md) | Orchestrator. Investigates, gets your agreement, writes `.claude/PLAN.md`, then delegates. Does not implement. | Sonnet 5, medium | `/planner` command (inline) |
-| [`skills/tester`](skills/tester/SKILL.md) | Writes failing tests first. Missing production code is expected. | Sonnet 5, medium | Fork, blocking. Planner-only. |
-| [`skills/impl-low`](skills/impl-low/SKILL.md) | Trivial one-file / mechanical changes. | Haiku 4.5, low | Fork, blocking. Planner-only. |
-| [`skills/impl-med`](skills/impl-med/SKILL.md) | Standard features and multi-file fixes. | Sonnet 5, medium | Fork, blocking. Planner-only. |
-| [`skills/impl-high`](skills/impl-high/SKILL.md) | Cross-cutting or high-risk work. | Sonnet 5, high | Fork, blocking. Planner-only. |
-| [`skills/reviewer-fede`](skills/reviewer-fede/SKILL.md) | Independent review against the ticket and the actual diff. Read-only. | Opus 4.8, medium, 1M context | Inline on purpose, so you see the full review. Also `/reviewer-fede`. |
+| Planner | Orchestrator. Agrees a plan, writes `.claude/PLAN.md`, delegates. Does not implement. | [`prompts/planner.md`](prompts/planner.md) — Sonnet 5, medium, `/planner` command | [`cursor/skills/planner`](cursor/skills/planner/SKILL.md) — inherit chat model, `/planner` skill, Task tool |
+| Tester | Failing tests first. Missing production code is expected. | [`skills/tester`](skills/tester/SKILL.md) — Sonnet 5, medium, fork | [`cursor/agents/tester.md`](cursor/agents/tester.md) — Grok 4.6 medium |
+| impl-low | Trivial one-file / mechanical changes. | Haiku 4.5, low, fork | Composer 2.5 |
+| impl-med | Standard multi-file features. | Sonnet 5, medium, fork | Grok 4.6 medium |
+| impl-high | Cross-cutting or high-risk work. | Sonnet 5, high, fork | Grok 4.6 high |
+| reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent |
 
-Forked workers return one of:
+Canonical worker text: [`skills/*/SKILL.md`](skills/). Cursor agents do not copy it.
+
+Workers return one of:
 
 - `STATUS: DONE` — planner continues
-- `STATUS: BLOCKED` — planner asks you if needed, then **re-invokes** the same skill with the missing fact. Do not answer a completed fork in chat.
+- `STATUS: BLOCKED` — planner asks you if needed, then **re-invokes** the same worker with the missing fact. Do not answer a completed worker in chat.
 - `STATUS: ESCALATE` — planner calls the named higher impl tier
 
-`tester` / `impl-*` cannot ask multiple-choice questions. `reviewer-fede` is not forked; if it cannot identify the diff or ticket, it returns `STATUS: BLOCKED` instead of guessing.
+`tester` / `impl-*` cannot ask multiple-choice questions. If `reviewer-fede` cannot identify the diff or ticket, it returns `STATUS: BLOCKED` instead of guessing.
 
 ## Install
 
-Clone this repo, then symlink into Claude Code's personal skills and commands. Paths below assume the clone lives at `$DOTAGENTS`.
+Clone this repo, then symlink. Paths assume `$DOTAGENTS="$HOME/Code/dotagents"`.
+
+### Claude Code
 
 ```bash
 git clone git@github.com:fege/dotagents.git "$HOME/Code/dotagents"
@@ -57,11 +63,25 @@ ln -sfn "$DOTAGENTS/skills/reviewer-fede"   "$HOME/.claude/skills/reviewer-fede"
 ln -sfn "$DOTAGENTS/prompts/planner.md"     "$HOME/.claude/commands/planner.md"
 ```
 
-Claude Code follows these symlinks. Edits in this repo are live in the current session (`SKILL.md` text is watched; restart if you create a new top-level skills directory).
+### Cursor
+
+```bash
+DOTAGENTS="$HOME/Code/dotagents"
+mkdir -p "$HOME/.cursor/skills" "$HOME/.cursor/agents"
+
+ln -sfn "$DOTAGENTS/cursor/skills/planner"      "$HOME/.cursor/skills/planner"
+ln -sfn "$DOTAGENTS/cursor/agents/tester.md"    "$HOME/.cursor/agents/tester.md"
+ln -sfn "$DOTAGENTS/cursor/agents/impl-low.md"  "$HOME/.cursor/agents/impl-low.md"
+ln -sfn "$DOTAGENTS/cursor/agents/impl-med.md"  "$HOME/.cursor/agents/impl-med.md"
+ln -sfn "$DOTAGENTS/cursor/agents/impl-high.md" "$HOME/.cursor/agents/impl-high.md"
+ln -sfn "$DOTAGENTS/cursor/agents/reviewer-fede.md" "$HOME/.cursor/agents/reviewer-fede.md"
+```
+
+Use Grok 4.6 as the chat model when you run `/planner`. Do not mix Grok 4.5 and 4.6 effort variants in the same session (Composer 2.5 for `impl-low` is a different family and is fine). Cursor also loads `~/.claude/skills/` for compatibility; `/planner` must dispatch via **Task** subagents, not those Claude skill copies.
 
 ## How to use
 
-In a project repo, start Claude Code and run `/planner`, then describe the work.
+In a project repo, start Claude Code or Cursor Agent and run `/planner`, then describe the work.
 
 Typical loop:
 
@@ -71,6 +91,6 @@ Typical loop:
 4. You run the test command tester returned (planner will ask first). Do not start review until tests are green.
 5. Planner invokes `reviewer-fede` against the ticket and the diff. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
 
-Skip the full loop when the request is already one skill's job: `/planner review this PR` should brief `reviewer-fede` and stop. You can also invoke `/reviewer-fede` yourself.
+Skip the full loop when the request is already one worker's job: `/planner review this PR` should brief `reviewer-fede` and stop.
 
-Do not invoke `tester` or `impl-*` from the `/` menu. They are `user-invocable: false` so only the planner (or Claude) should call them, with a complete argument string.
+Do not invoke `tester` or `impl-*` from the `/` menu in Claude Code (`user-invocable: false`). In Cursor, let `/planner` launch them as subagents.

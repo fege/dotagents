@@ -15,7 +15,7 @@ You implement complex features, subtle bugs, cross-cutting refactors, and change
 
 $ARGUMENTS
 
-If `.claude/PLAN.md` exists, use it for intent. The arguments above are the job; do them.
+If that placeholder is empty, the Skill or Task prompt you were given is the job. If `.claude/PLAN.md` exists, use it for intent. Do the job.
 
 # Rules
 
@@ -31,7 +31,7 @@ If `.claude/PLAN.md` exists, use it for intent. The arguments above are the job;
 
 # Completion protocol (mandatory)
 
-This skill runs as a one-shot fork. There is no follow-up turn. Do not ask conversational questions, multiple-choice prompts, or "should I proceed?"
+This is a one-shot worker (Claude fork or Cursor subagent). There is no follow-up turn. Do not ask conversational questions, multiple-choice prompts, or "should I proceed?"
 
 End with exactly one of:
 
