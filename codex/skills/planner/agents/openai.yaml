@@ -1,0 +1,6 @@
+interface:
+  display_name: planner
+  short_description: TDD orchestrator. Plans, then spawns tester / impl-* / reviewer-fede. Does not implement.
+
+policy:
+  allow_implicit_invocation: false
