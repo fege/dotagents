@@ -1,7 +1,8 @@
 ---
 name: reviewer-fede
 description: Performs a deep, independent code review from first principles.
-model: claude-opus-4-8
+model: claude-opus-4-8@default[1m]
+effort: medium
 user-invocable: true
 disallowed-tools: Edit, Write
 ---

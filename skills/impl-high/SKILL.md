@@ -3,7 +3,8 @@ name: impl-high
 description: HIGH-complexity implementer. Use for hard, high-risk, or cross-cutting changes requiring deep reasoning and design judgment — complex features, subtle bugs, multi-subsystem refactors, and real design tradeoffs.
 context: fork
 background: false
-model: claude-opus-4-6
+model: claude-sonnet-5@default
+effort: high
 user-invocable: false
 disallowed-tools: AskUserQuestion
 ---

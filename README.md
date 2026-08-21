@@ -22,14 +22,14 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 
 ## What each piece does
 
-| Piece | Role | How it runs |
-| --- | --- | --- |
-| [`prompts/planner.md`](prompts/planner.md) | Orchestrator. Investigates, gets your agreement, writes `.claude/PLAN.md`, then delegates. Does not implement. | `/planner` command (inline) |
-| [`skills/tester`](skills/tester/SKILL.md) | Writes failing tests first. Missing production code is expected. | Fork, blocking. Planner-only. |
-| [`skills/impl-low`](skills/impl-low/SKILL.md) | Trivial one-file / mechanical changes. Haiku. | Fork, blocking. Planner-only. |
-| [`skills/impl-med`](skills/impl-med/SKILL.md) | Standard features and multi-file fixes. Sonnet. | Fork, blocking. Planner-only. |
-| [`skills/impl-high`](skills/impl-high/SKILL.md) | Cross-cutting or high-risk work. Opus. | Fork, blocking. Planner-only. |
-| [`skills/reviewer-fede`](skills/reviewer-fede/SKILL.md) | Independent review against the ticket and the actual diff. Read-only. | Inline on purpose, so you see the full review. Also `/reviewer-fede`. |
+| Piece | Role | Model | How it runs |
+| --- | --- | --- | --- |
+| [`prompts/planner.md`](prompts/planner.md) | Orchestrator. Investigates, gets your agreement, writes `.claude/PLAN.md`, then delegates. Does not implement. | Sonnet 5, medium | `/planner` command (inline) |
+| [`skills/tester`](skills/tester/SKILL.md) | Writes failing tests first. Missing production code is expected. | Sonnet 5, medium | Fork, blocking. Planner-only. |
+| [`skills/impl-low`](skills/impl-low/SKILL.md) | Trivial one-file / mechanical changes. | Haiku 4.5, low | Fork, blocking. Planner-only. |
+| [`skills/impl-med`](skills/impl-med/SKILL.md) | Standard features and multi-file fixes. | Sonnet 5, medium | Fork, blocking. Planner-only. |
+| [`skills/impl-high`](skills/impl-high/SKILL.md) | Cross-cutting or high-risk work. | Sonnet 5, high | Fork, blocking. Planner-only. |
+| [`skills/reviewer-fede`](skills/reviewer-fede/SKILL.md) | Independent review against the ticket and the actual diff. Read-only. | Opus 4.8, medium, 1M context | Inline on purpose, so you see the full review. Also `/reviewer-fede`. |
 
 Forked workers return one of:
 

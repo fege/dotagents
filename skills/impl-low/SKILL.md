@@ -4,6 +4,7 @@ description: LOW-complexity implementer. Use for trivial, mechanical, well-speci
 context: fork
 background: false
 model: claude-haiku-4-5@20251001
+effort: low
 user-invocable: false
 disallowed-tools: AskUserQuestion
 ---

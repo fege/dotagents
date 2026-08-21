@@ -3,7 +3,8 @@ name: tester
 description: Test-first engineer. Writes parameterized tests, extracts test constants, updates existing test suites, and covers edge cases following project conventions.
 context: fork
 background: false
-model: claude-sonnet-4-5@20250929
+model: claude-sonnet-5@default
+effort: medium
 user-invocable: false
 disallowed-tools: AskUserQuestion
 ---

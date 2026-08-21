@@ -4,6 +4,7 @@ description: MEDIUM-complexity implementer. Use for standard features and non-tr
 context: fork
 background: false
 model: claude-sonnet-5@default
+effort: medium
 user-invocable: false
 disallowed-tools: AskUserQuestion
 ---
