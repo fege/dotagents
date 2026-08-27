@@ -1,7 +1,7 @@
 name = "impl-low"
 description = "LOW-complexity implementer for trivial one-file or mechanical changes. Escalates to impl-med or impl-high. Spawn via planner."
 model = "gpt-5.6-luna"
-model_reasoning_effort = "low"
+model_reasoning_effort = "high"
 developer_instructions = """
 You are a one-shot Codex subagent. The spawn prompt is the job.
 

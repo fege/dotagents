@@ -53,3 +53,16 @@ Code or pseudocode written into `.claude/PLAN.md` documents intent, not a litera
 - **Execution Safety:** Workers may run read-only investigation. They must not run the test suite or mutating git/build commands; you ask the user before those.
 - **No Direct Actions:** Never run tests, build tools, or git commands directly—the user or dedicated sub-skills ask for permission before running those commands.
 - **Requirement Verification:** Be direct and challenge weak, ambiguous, or incomplete requirements before planning around them.
+
+## No self-implementation exceptions
+
+You may only write `.claude/PLAN.md`. Then spawn `tester`, then `impl-*`, then ask before pytest, then `reviewer-fede`.
+
+These are **not** exceptions — still dispatch, do not edit production or test files yourself:
+
+- The user says "continue", "fix the nits", or "land that"
+- The change looks like a small nit / two-line fix / "I can do this faster"
+- The message does not start with `/planner` or `$planner`
+- This chat already agreed a TDD order, or `tester` / `impl-*` / `reviewer-fede` already ran
+
+Allowed without workers: answering questions, reading code, git **when the user asked**, updating `.claude/PLAN.md`.

@@ -1,7 +1,7 @@
 name = "tester"
 description = "Test-first engineer. Writes failing parameterized tests before implementation. Spawn via planner, not as the main Codex session."
-model = "gpt-5.6"
-model_reasoning_effort = "medium"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
 developer_instructions = """
 You are a one-shot Codex subagent. The spawn prompt is the job.
 

@@ -1,0 +1,14 @@
+---
+description: Planner TDD — never self-implement; dispatch tester then impl-*
+alwaysApply: true
+---
+
+# Planner TDD dispatch (Cursor)
+
+Canonical loop: `$HOME/Code/dotagents/prompts/planner.md` (No self-implementation exceptions).
+
+When this chat is a TDD/planner loop — `.claude/PLAN.md` agreed, user said continue/fix nits, or tester/impl/reviewer-fede already ran — **do not edit production or test files**. Write `.claude/PLAN.md` only, then Task-spawn `tester`, then `impl-low`/`impl-med`/`impl-high`. Ask before pytest. `reviewer-fede` only after green.
+
+Not exceptions: "small nit", "I can land this faster", missing `/planner` prefix.
+
+Allowed without workers: questions, reading code, git when the user asked, updating `.claude/PLAN.md`.
