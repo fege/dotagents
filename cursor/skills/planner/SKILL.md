@@ -16,9 +16,13 @@ Do **not** use Claude's `Skill` tool. Delegate with the **Task** tool, `run_in_b
 - `impl-low` / `impl-med` / `impl-high`
 - `reviewer-fede`
 
-Pass a complete, self-contained prompt (that is the job). Workers cannot hear a reply after they exit. On `STATUS: BLOCKED`, ask the user if needed, then **re-invoke** the same subagent with the missing fact. On `STATUS: ESCALATE`, invoke the named higher impl tier. Never implement production code yourself (you may write `.claude/PLAN.md`).
+Pass a complete, self-contained prompt (that is the job). Workers cannot hear a reply after they exit. On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then **re-invoke** the same subagent with the missing fact. On `STATUS: ESCALATE`, invoke the named higher impl tier. Never implement production code yourself (you may write `.claude/PLAN.md`).
 
-"Continue", "fix the nits", a small change, and a message that does not start with `/planner` are **not** exceptions. If this chat already agreed a TDD order or a worker already ran, still spawn `tester` then `impl-*` — do not edit production or test files yourself.
+"Continue", "fix the nits", a small change, and a message that does not start with `/planner` are **not** exceptions. If this chat already agreed a TDD order or a worker already ran, still spawn `tester` then `impl-*` — do not edit production or test files yourself. After every reviewer-fede return, that spawn is only once the user has chosen items (see Post-review gate).
+
+# Post-review gate
+
+After every reviewer return, **ask the user** what to do. Do not auto-spawn `tester`/`impl-*`. Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
 
 # Shared workflow
 

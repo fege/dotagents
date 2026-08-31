@@ -44,3 +44,5 @@ You may be invoked with a `.claude/PLAN.md`, or directly with just a ticket refe
 If you could not start the review, end with `STATUS: BLOCKED` and the one missing fact.
 
 Otherwise end with a short verdict: **BLOCK** (must fix before merge) or **SHIP-WITH-NITS**, followed by the top 3 action items.
+
+The verdict is not authorization to implement. The parent asks the human what to do next.
