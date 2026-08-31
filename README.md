@@ -106,8 +106,9 @@ Typical loop:
 1. Planner investigates and proposes an approach. It does not write `.claude/PLAN.md` until you agree.
 2. After you agree, it delegates to `tester`. Tests go in first, even if the implementation does not exist yet.
 3. On `STATUS: DONE`, it delegates to `impl-low`, `impl-med`, or `impl-high`. When unsure, it picks the lower tier.
-4. You run the test command tester returned (planner will ask first). Do not start review until tests are green.
-5. Planner invokes `reviewer-fede` against the ticket and the diff. After every reviewer return, ask before any fix cycle. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
+4. After impl, the planner shows the changed paths and asks you to comment or proceed. Do not run tests or start review until you say so.
+5. You run the test command tester returned (planner will ask first). Do not start review until tests are green.
+6. Planner invokes `reviewer-fede` against the ticket and the diff. After every reviewer return, ask before any fix cycle. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
 
 Skip the full loop when the request is already one worker's job: `/planner review this PR` (or `$planner review this PR`) should brief `reviewer-fede` and stop.
 

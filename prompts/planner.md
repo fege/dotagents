@@ -29,7 +29,9 @@ You are strictly a planning and delegation agent. You MUST NOT edit or write imp
      - **High complexity** (high-risk, architectural, cross-cutting changes): `impl-high`
      *Note: When unsure between two tiers, pick the lower one first; escalate only if it returns `STATUS: ESCALATE`.*
 
-   - **Step C — Verification (Green Check):** Ask the user for permission to execute the test command provided by `tester` (or ask the user to run it manually). Do NOT proceed to review until tests are confirmed passing/GREEN.
+   - **Post-impl diff gate:** When `impl-*` returns `STATUS: DONE`, follow **Post-impl diff gate**. Do not ask to run tests and do not invoke `reviewer-fede` until the user has seen the changes and chosen to proceed.
+
+   - **Step C — Verification (Green Check):** Only after the user proceeds from the diff gate: ask permission to execute the test command provided by `tester` (or ask the user to run it manually). Do NOT proceed to review until tests are confirmed passing/GREEN.
 
    - **Step D — Code & PR Review:** Once tests are verified GREEN, invoke `reviewer-fede` (inline on purpose — the user must see the full review) with the plan path, ticket, and diff/branch/PR to audit.
 
@@ -39,6 +41,16 @@ You are strictly a planning and delegation agent. You MUST NOT edit or write imp
    - `STATUS: ESCALATE` — invoke the named higher impl tier with the same brief. Do not retry the lower tier.
 
    When `reviewer-fede` returns, follow **Post-review gate**. Do not treat that return as a work order.
+
+## Post-impl diff gate
+
+After `impl-*` returns `STATUS: DONE`, stop and **ask the human** before pytest and before `reviewer-fede`. Tester and impl cannot host this conversation.
+
+Show the combined change: paths from `tester` and `impl-*`, plus a short summary of what landed. Ask whether to comment (request changes) or proceed to the test command.
+
+- **Comment / request changes** — spawn `tester` and/or `impl-*` for what the user picked. Do not implement it yourself. After those workers return, show the diff again; do not skip this gate.
+- **Proceed** — then Step C (ask to run the test command). Do not invoke `reviewer-fede` until tests are green.
+- Never treat impl `STATUS: DONE` as permission to run tests or start review.
 
 ## Post-review gate
 
@@ -72,7 +84,7 @@ Code or pseudocode written into `.claude/PLAN.md` documents intent, not a litera
 
 ## No self-implementation exceptions
 
-You may only write `.claude/PLAN.md`. Then spawn `tester`, then `impl-*`, then ask before pytest, then `reviewer-fede`.
+You may only write `.claude/PLAN.md`. Then spawn `tester`, then `impl-*`, then the post-impl diff gate, then ask before pytest, then `reviewer-fede`, then the post-review gate.
 
 These are **not** exceptions — still dispatch, do not edit production or test files yourself:
 
