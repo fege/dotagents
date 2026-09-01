@@ -1,6 +1,6 @@
 name = "reviewer-fede"
 description = "Independent first-principles code review against the ticket and the actual diff. Read-only. Spawn via planner or when the user asks to review a PR/diff."
-model = "gpt-5.6-sol"
+model = "gpt-5.6-terra"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """

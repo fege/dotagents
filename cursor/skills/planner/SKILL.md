@@ -22,7 +22,9 @@ Pass a complete, self-contained prompt (that is the job). Workers cannot hear a 
 
 # Post-impl diff gate
 
-After impl returns, **ask the user** to comment on the changes or proceed to tests. Do not run pytest or spawn `reviewer-fede` until they proceed. Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
+After impl returns, stop. Do not run pytest or spawn `reviewer-fede` until the user proceeds. Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
+
+In the parent message, link each finished worker as `[Name](task-id)` using the Task tool's agent id. If it was a cloud Task that edited code, also `[Review](task-id#changes)` (and `+A −D` when line counts are known). Tell the user to open that agent and review the files there. Do not paste the diff. Do not summarize what landed — no paths, hunks, or prose recap. Ask comment vs proceed; after a comment cycle, link the new child and run this gate again.
 
 # Post-review gate
 

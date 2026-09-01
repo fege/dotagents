@@ -31,7 +31,7 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 | impl-low | Trivial one-file / mechanical changes. | Haiku 4.5, low, fork | Composer 2.5 | GPT-5.6 Luna, high |
 | impl-med | Standard multi-file features. | Sonnet 5, medium, fork | Grok 4.6 medium | GPT-5.6 Luna, max |
 | impl-high | Cross-cutting or high-risk work. | Sonnet 5, high, fork | Grok 4.6 high | GPT-5.6 Sol, high |
-| reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent | GPT-5.6 Sol, xhigh, read-only sandbox |
+| reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent | GPT-5.6 Terra, xhigh, read-only sandbox |
 
 Canonical worker text: [`skills/*/SKILL.md`](skills/). Cursor and Codex adapters do not copy it.
 
@@ -106,8 +106,8 @@ Typical loop:
 1. Planner investigates and proposes an approach. It does not write `.claude/PLAN.md` until you agree.
 2. After you agree, it delegates to `tester`. Tests go in first, even if the implementation does not exist yet.
 3. On `STATUS: DONE`, it delegates to `impl-low`, `impl-med`, or `impl-high`. When unsure, it picks the lower tier.
-4. After impl, the planner shows the changed paths and asks you to comment or proceed. Do not run tests or start review until you say so.
-5. You run the test command tester returned (planner will ask first). Do not start review until tests are green.
+4. After impl, open the worker thread's native file-review UI (inline hunks / Edited files), then tell the planner to comment or proceed. Do not run tests or invoke `reviewer-fede` until you choose proceed.
+5. You run the test command tester returned (planner will ask first). Do not invoke `reviewer-fede` until tests are green.
 6. Planner invokes `reviewer-fede` against the ticket and the diff. After every reviewer return, ask before any fix cycle. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
 
 Skip the full loop when the request is already one worker's job: `/planner review this PR` (or `$planner review this PR`) should brief `reviewer-fede` and stop.
