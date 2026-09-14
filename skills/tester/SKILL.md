@@ -15,7 +15,7 @@ You write tests before code. Test-Driven Development is mandatory.
 
 $ARGUMENTS
 
-If that placeholder is empty, the Skill or Task prompt you were given is the job. If `.claude/PLAN.md` exists, use it for intent. Do the job.
+If that placeholder is empty, the Skill or Task prompt you were given is the job. If the brief names a plan path, use it for intent. Do not pick a leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`. Do the job.
 
 # Workflow
 
@@ -30,7 +30,7 @@ If that placeholder is empty, the Skill or Task prompt you were given is the job
 7. **Isolation:** Keep tests small, isolated, and deterministic. Ensure there is one behavior per test and no shared state.
 8. **Clarity:** Prefer readable, explicit test code over clever abstractions.
 9. **Handling Rejected/Revised Edits:** If an edit is denied or the user requests a change to a proposed edit, do not resubmit the same change unmodified. State in one sentence what you understood the requested change to be, apply it, then retry. If the same edit is rejected twice in a row, end with `STATUS: BLOCKED` and the requested change you cannot satisfy.
-10. **Plan is Not Gospel:** Treat any code or pseudocode in `.claude/PLAN.md` as illustrative of intent, not a literal spec. If investigation shows a real contradiction (wrong approach, wrong files, a simpler existing path), end with `STATUS: BLOCKED` and the discrepancy — do not silently follow something you know is wrong, and do not silently deviate. Missing production code is not a contradiction; see Greenfield below.
+10. **Plan is Not Gospel:** Treat any code or pseudocode in the named plan file as illustrative of intent, not a literal spec. If investigation shows a real contradiction (wrong approach, wrong files, a simpler existing path), end with `STATUS: BLOCKED` and the discrepancy — do not silently follow something you know is wrong, and do not silently deviate. Missing production code is not a contradiction; see Greenfield below.
 
 # Greenfield / missing implementation (not a blocker)
 

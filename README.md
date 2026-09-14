@@ -5,7 +5,7 @@ Personal TDD loop for [Claude Code](https://code.claude.com/docs/en/skills), [Cu
 Worker **instructions** live once under `skills/`. Claude Code loads those files as skills. Cursor and Codex load thin wrappers (`cursor/`, `codex/`) that pin models and then read the same `SKILL.md` bodies.
 
 ```
-you  -->  /planner or $planner  -->  agree on PLAN.md
+you  -->  /planner or $planner  -->  agree on .plans/PLAN-YYYYMMDD-HHMMSS.md
                             |
                             v
                          tester
@@ -26,7 +26,7 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 
 | Piece | Role | Claude Code | Cursor | Codex |
 | --- | --- | --- | --- | --- |
-| Planner | Orchestrator. Agrees a plan, writes `.claude/PLAN.md`, delegates. Does not implement. | [`prompts/planner.md`](prompts/planner.md) — Sonnet 5, medium, `/planner` command | [`cursor/skills/planner`](cursor/skills/planner/SKILL.md) — inherit chat model, `/planner` skill, Task tool | [`codex/skills/planner`](codex/skills/planner/SKILL.md) — `$planner` skill, spawn named agents |
+| Planner | Orchestrator. Agrees a plan, writes `.plans/PLAN-YYYYMMDD-HHMMSS.md`, delegates. Does not implement. | [`prompts/planner.md`](prompts/planner.md) — Sonnet 5, medium, `/planner` command | [`cursor/skills/planner`](cursor/skills/planner/SKILL.md) — inherit chat model, `/planner` skill, Task tool | [`codex/skills/planner`](codex/skills/planner/SKILL.md) — `$planner` skill, spawn named agents |
 | Tester | Failing tests first. Missing production code is expected. | [`skills/tester`](skills/tester/SKILL.md) — Sonnet 5, medium, fork | [`cursor/agents/tester.md`](cursor/agents/tester.md) — Grok 4.6 medium | [`codex/agents/tester.toml`](codex/agents/tester.toml) — GPT-5.6 Luna, max |
 | impl-low | Trivial one-file / mechanical changes. | Haiku 4.5, low, fork | Composer 2.5 | GPT-5.6 Luna, high |
 | impl-med | Standard multi-file features. | Sonnet 5, medium, fork | Grok 4.6 medium | GPT-5.6 Luna, max |
@@ -97,7 +97,18 @@ cp -f "$DOTAGENTS/codex/agents/impl-high.toml"     "$HOME/.codex/agents/impl-hig
 cp -f "$DOTAGENTS/codex/agents/reviewer-fede.toml" "$HOME/.codex/agents/reviewer-fede.toml"
 ```
 
-Do **not** symlink `skills/tester` (etc.) into `~/.agents/skills`. Codex would load those as in-session skills and skip the one-shot spawn loop. `$planner` must spawn named agents under `~/.codex/agents/`. The planner skill has `allow_implicit_invocation: false` — Codex must not auto-load it; type `$planner`. If spawn cannot take a custom agent name, the planner falls back to a generic `worker` / `explorer` whose prompt points at the canonical `SKILL.md`. Restart Codex after copying. Subagents must stay enabled (`agents.enabled` defaults to true in `~/.codex/config.toml`). Re-copy the TOMLs after you edit `codex/agents/` in this repo.
+Do **not** symlink `skills/tester` (etc.) into `~/.agents/skills`. Codex would load those as in-session skills and skip the one-shot spawn loop. `$planner` must spawn named agents under `~/.codex/agents/` with `agent_type` + `fork_turns = none`. Never `create_thread`. GPT-5.6 hides `agent_type` unless `~/.codex/config.toml` has:
+
+```toml
+# Do not set multi_agent_v2 = true. These keys only restore agent_type on spawn.
+[features.multi_agent_v2]
+hide_spawn_agent_metadata = false
+tool_namespace = "agents"
+```
+
+The planner skill has `allow_implicit_invocation: false` — type `$planner`. Fully quit Codex Desktop after copying TOMLs or changing that block. Re-copy the TOMLs after you edit `codex/agents/` in this repo.
+
+Verify spawns with `python3 $DOTAGENTS/codex/scripts/list_sessions.py`. `kind=subagent` plus `agent_role` is a named custom agent. `kind=thread` is a Desktop `create_thread` sibling (wrong model). After a tester spawn, `python3 $DOTAGENTS/codex/scripts/check_spawn.py --role tester` must print `PASS` (`kind=subagent`, luna, `max`).
 
 ## How to use
 
@@ -105,7 +116,7 @@ In a project repo, start Claude Code or Cursor Agent and run `/planner`, or star
 
 Typical loop:
 
-1. Planner investigates and proposes an approach. It does not write `.claude/PLAN.md` until you agree.
+1. Planner investigates and proposes an approach. It does not write `.plans/PLAN-YYYYMMDD-HHMMSS.md` until you agree.
 2. After you agree, it delegates to `tester`. Tests go in first, even if the implementation does not exist yet.
 3. On `STATUS: DONE`, it delegates to `impl-low`, `impl-med`, or `impl-high`. When unsure, it picks the lower tier.
 4. After impl, open the worker thread's native file-review UI (inline hunks / Edited files), then tell the planner to comment or proceed. Do not run tests or invoke `reviewer-fede` until you choose proceed.
@@ -115,3 +126,15 @@ Typical loop:
 Skip the full loop when the request is already one worker's job: `/planner review this PR` (or `$planner review this PR`) should brief `reviewer-fede` and stop.
 
 Do not invoke `tester` or `impl-*` from the `/` menu in Claude Code (`user-invocable: false`). In Cursor and Codex, let the planner launch them as subagents.
+
+## Plans
+
+Plans live in the **project** repo as `.plans/PLAN-YYYYMMDD-HHMMSS.md` (UTC). Claude Code, Cursor, and Codex share that directory.
+
+A new chat does not resume an old plan. Leftover `PLAN*.md` files are not an entry signal. To continue previous work, invoke `/planner` or `$planner` and name the file:
+
+```
+/planner use .plans/PLAN-20260914-101800.md
+```
+
+The planner then updates that file in place and briefs workers with that path. If you do not name a path, it agrees a new plan and writes a new timestamped file. Legacy `.claude/PLAN*.md` or `.dotagents/PLAN*.md` files can be named the same way.

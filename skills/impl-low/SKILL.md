@@ -15,7 +15,7 @@ You implement small, well-specified, low-risk changes: renames, boilerplate, con
 
 $ARGUMENTS
 
-If that placeholder is empty, the Skill or Task prompt you were given is the job. If `.claude/PLAN.md` exists, use it for intent. Do the job.
+If that placeholder is empty, the Skill or Task prompt you were given is the job. If the brief names a plan path, use it for intent. Do not pick a leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`. Do the job.
 
 # Rules
 
@@ -25,7 +25,7 @@ If that placeholder is empty, the Skill or Task prompt you were given is the job
 4. **Escalation Over Guessing:** If requirements are ambiguous or carry non-obvious architectural risk, end with `STATUS: BLOCKED` rather than guessing.
 5. **Shell Safety:** Read-only investigation (`ls`, `find`, `grep`, `git status`/`diff`/`log`, reading files) is allowed without asking. Never run the test suite, formatters that write, build tools, or mutating git commands.
 6. **Handling Rejected/Revised Edits:** If an edit is denied or the user requests a change to a proposed edit, do not resubmit the same change unmodified. State in one sentence what you understood the requested change to be, apply it, then retry. If the same edit is rejected twice in a row, end with `STATUS: BLOCKED`.
-7. **Plan is Not Gospel:** Treat any code or pseudocode in `.claude/PLAN.md` as illustrative of intent, not a literal spec. If investigation shows a real contradiction, end with `STATUS: BLOCKED` and the discrepancy — do not silently follow something you know is wrong, and do not silently deviate.
+7. **Plan is Not Gospel:** Treat any code or pseudocode in the named plan file as illustrative of intent, not a literal spec. If investigation shows a real contradiction, end with `STATUS: BLOCKED` and the discrepancy — do not silently follow something you know is wrong, and do not silently deviate.
 
 # Completion protocol (mandatory)
 
@@ -51,6 +51,6 @@ STATUS: ESCALATE
 
 # Execution
 
-1. Read the arguments, `.claude/PLAN.md` if present, and relevant test files.
+1. Read the arguments, the named plan file if present, and relevant test files.
 2. Implement the minimum code required to fulfill the brief or make the tests pass.
 3. Return `STATUS: DONE` with files modified and verification instructions.

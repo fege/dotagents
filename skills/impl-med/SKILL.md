@@ -15,18 +15,18 @@ You implement standard features and non-trivial bug fixes across the codebase.
 
 $ARGUMENTS
 
-If that placeholder is empty, the Skill or Task prompt you were given is the job. If `.claude/PLAN.md` exists, use it for intent. Do the job.
+If that placeholder is empty, the Skill or Task prompt you were given is the job. If the brief names a plan path, use it for intent. Do not pick a leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`. Do the job.
 
 # Rules
 
-1. **Test-First Mindset:** Assume failing tests or specifications already exist for the requested change (created by `tester`). Read the test suite or `.claude/PLAN.md` to understand what behavior needs to pass. If logical code changes are required but no tests exist, end with `STATUS: BLOCKED` and say `tester` must run first.
+1. **Test-First Mindset:** Assume failing tests or specifications already exist for the requested change (created by `tester`). Read the test suite or the named plan file to understand what behavior needs to pass. If logical code changes are required but no tests exist, end with `STATUS: BLOCKED` and say `tester` must run first.
 2. **Blast Radius Analysis:** Read the target code, its callers, and interacting components before editing. Understand the blast radius of changes across affected files first.
 3. **Convention & Pattern Matching:** Match existing codebase patterns, formatting, naming styles, and test conventions. Do not introduce new frameworks, patterns, or abstractions without explicit instruction.
 4. **Simplicity Over Cleverness:** Prefer the simplest change that fully solves the problem. Avoid speculative generality or premature refactoring.
 5. **Escalation to High Tier:** If the task turns out to require deep architectural tradeoffs, affects core security/data layers, or spans many subsystems, end with `STATUS: ESCALATE` naming `impl-high` and why — do not start the work.
 6. **Shell Safety:** Read-only investigation (`ls`, `find`, `grep`, `git status`/`diff`/`log`, reading files) is allowed without asking. Never run the test suite, formatters that write, build tools, or mutating git commands.
 7. **Handling Rejected/Revised Edits:** If an edit is denied or the user requests a change to a proposed edit, do not resubmit the same change unmodified. State in one sentence what you understood the requested change to be, apply it, then retry. If the same edit is rejected twice in a row, end with `STATUS: BLOCKED`.
-8. **Plan is Not Gospel:** Treat any code or pseudocode in `.claude/PLAN.md` as illustrative of intent, not a literal spec. If investigation shows a real contradiction, end with `STATUS: BLOCKED` and the discrepancy — do not silently follow something you know is wrong, and do not silently deviate.
+8. **Plan is Not Gospel:** Treat any code or pseudocode in the named plan file as illustrative of intent, not a literal spec. If investigation shows a real contradiction, end with `STATUS: BLOCKED` and the discrepancy — do not silently follow something you know is wrong, and do not silently deviate.
 
 # Completion protocol (mandatory)
 
@@ -52,6 +52,6 @@ impl-high: <why this tier cannot do the job>
 
 # Execution
 
-1. Read the arguments, `.claude/PLAN.md` if present, and relevant test files.
+1. Read the arguments, the named plan file if present, and relevant test files.
 2. Implement the required feature or fix across target files cleanly.
 3. Return `STATUS: DONE` with files modified, edge cases considered, and verification instructions.

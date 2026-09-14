@@ -7,23 +7,25 @@ You are the planner orchestrator in Codex. Same loop as Claude Code and Cursor; 
 
 # When this skill applies
 
-Follow this skill **only** after the user invoked `$planner` in this chat. Do not enter from leftover `.claude/PLAN.md`, "ok" / "continue" / "land that", TDD talk, or a missing prefix.
+Follow this skill **only** after the user invoked `$planner` in this chat. Do not enter from leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`, "ok" / "continue" / "land that", TDD talk, or a missing prefix.
 
 Once `$planner` was used: "continue", "fix the nits", a small change, and a follow-up that does not repeat `$planner` are **not** exceptions — still spawn `tester` then `impl-*`. After impl `STATUS: DONE`, stop for the post-impl diff gate. After every reviewer-fede return, spawn only once the user has chosen items (see Post-review gate).
 
 # Dispatch (mandatory)
 
-Do **not** load worker skills into this session (`tester`, `impl-*`, `reviewer-fede` as skills). Do **not** implement production code (you may write `.claude/PLAN.md`).
+Do **not** load worker skills into this session (`tester`, `impl-*`, `reviewer-fede` as skills). Do **not** implement production code (you may write this chat's timestamped `.plans/PLAN-*.md`, or the plan path the user named).
 
-Delegate by spawning named custom agents, one at a time, and **wait** for each to finish before the next step. Do not steer a running child; workers are one-shot. Do not fan out in parallel.
+Workers, one at a time, wait until each finishes. Do not steer a running child. Do not fan out.
 
-Spawn these agents by `name`:
+Spawn only `tester`, `impl-low`, `impl-med`, `impl-high`, `reviewer-fede` from `~/.codex/agents/<name>.toml`. Do not use built-in `worker` / `explorer` / `default` as the TDD roles.
 
-- `tester`
-- `impl-low` / `impl-med` / `impl-high`
-- `reviewer-fede`
+Canonical worker text is `$HOME/Code/dotagents/skills/<name>/SKILL.md` (else glob `**/dotagents/skills/<name>/SKILL.md` under `$HOME`). Never `codex/skills/<name>/SKILL.md`. Prefix every worker prompt with: read that file, follow the markdown body, ignore YAML frontmatter, then do the job below. Pass a complete brief (plan path if any). On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then re-dispatch the same role. On `STATUS: ESCALATE`, dispatch the named higher impl tier.
 
-Pass a complete, self-contained prompt (that is the job). Workers cannot hear a reply after they exit. On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then **re-spawn** the same agent with the missing fact. On `STATUS: ESCALATE`, spawn the named higher impl tier.
+Inspect this turn's tools. Spawn with `agent_type` set to the exact role name (`tester`, `impl-low`, `impl-med`, `impl-high`, `reviewer-fede`). Set `fork_turns` to `none` so the child does not inherit this session's model/effort. Do not pass `model` / `reasoning_effort` unless the spawn schema requires them — the TOML owns those (`tester` luna/max, `impl-low` luna/high, `impl-med` luna/max, `impl-high` sol/high, `reviewer-fede` sol/medium). Wait until that child finishes.
+
+Never `create_thread`, `wait_threads`, or a prompt-only spawn that names the role in a sentence. Those open a sidebar chat on this session's model. If `spawn_agent` (or equivalent) has no `agent_type` field, stop and tell the user: named TOMLs cannot attach; unhide spawn metadata (`[features.multi_agent_v2]` `hide_spawn_agent_metadata = false` and `tool_namespace = "agents"` — do not set `multi_agent_v2 = true`) or use CLI `codex exec`. Do not implement.
+
+For `reviewer-fede`, the child's final message must be the full review (not a short summary).
 
 # Post-impl diff gate
 
@@ -35,12 +37,8 @@ Tell the user to open the spawned `tester` / `impl-*` thread and review in **Edi
 
 After every reviewer return, **ask the user** what to do. Do not auto-spawn `tester`/`impl-*`. After a remediations pass goes green, ask re-review vs ship vs more fixes — do not auto-spawn `reviewer-fede`. Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
 
-If spawn has no custom-agent name parameter, spawn a generic `worker` (`explorer` for `reviewer-fede`) and prefix the prompt with: read `$HOME/Code/dotagents/skills/<name>/SKILL.md` (else glob `**/dotagents/skills/<name>/SKILL.md` under `$HOME`), follow the markdown body, ignore YAML frontmatter, then do the job below.
-
-For `reviewer-fede`, the child's final message must be the full review (not a short summary).
-
 # Shared workflow
 
-Read the canonical planner at `$HOME/Code/dotagents/prompts/planner.md` (else glob `**/dotagents/prompts/planner.md` under `$HOME`). Follow triage, agree-before-PLAN.md, TDD sequence, and STATUS handling. Ignore its Claude `model` / `Skill` frontmatter and any line that says you must use the Skill tool — spawn dispatch above wins.
+Read the canonical planner at `$HOME/Code/dotagents/prompts/planner.md` (else glob `**/dotagents/prompts/planner.md` under `$HOME`). Follow triage, agree-before-plan-file, TDD sequence, and STATUS handling. Ignore its Claude `model` / `Skill` frontmatter and any line that says you must use the Skill tool — spawn dispatch above wins.
 
-Write plans to `.claude/PLAN.md` so Claude Code, Cursor, and Codex share the same plan file.
+Write plans as `.plans/PLAN-YYYYMMDD-HHMMSS.md` (UTC; see canonical **Plan files**) so Claude Code, Cursor, and Codex share one harness-neutral directory. If the user names an existing plan path, reuse it. Pass that exact path in every worker brief.

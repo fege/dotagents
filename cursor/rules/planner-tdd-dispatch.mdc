@@ -9,11 +9,11 @@ alwaysApply: true
 
 These are **not** entry signals. Implement or answer normally:
 
-- `.claude/PLAN.md` exists from another session
+- leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md` exists from another session
 - the user said "ok", "continue", "land that", "fix the nits"
 - a question or change about the planner/skills/docs
 - missing `/planner` prefix on an ordinary request
 
-Once `/planner` or `$planner` **was** used in this chat: do not edit production or test files. Write `.claude/PLAN.md` only, then Task-spawn `tester`, then `impl-low`/`impl-med`/`impl-high`. Follow-ups in that same chat ("continue", "fix the nits", no prefix) still dispatch. Ask before pytest. `reviewer-fede` only after green.
+Once `/planner` or `$planner` **was** used in this chat: do not edit production or test files. Write a unique `.plans/PLAN-YYYYMMDD-HHMMSS.md` only (or update the plan path the user named), then Task-spawn `tester`, then `impl-low`/`impl-med`/`impl-high`. Follow-ups in that same chat ("continue", "fix the nits", no prefix) still dispatch. Ask before pytest. `reviewer-fede` only after green.
 
-Allowed without workers even inside a planner chat: questions, reading code, git when the user asked, updating `.claude/PLAN.md`.
+Allowed without workers even inside a planner chat: questions, reading code, git when the user asked, updating this chat's plan file.
