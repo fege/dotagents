@@ -1,14 +1,19 @@
 ---
-description: Planner TDD — never self-implement; dispatch tester then impl-*
+description: Planner TDD — only after explicit /planner; then never self-implement
 alwaysApply: true
 ---
 
 # Planner TDD dispatch (Cursor)
 
-Canonical loop: `$HOME/Code/dotagents/prompts/planner.md` (No self-implementation exceptions).
+**Do not enter this loop unless the user explicitly invoked `/planner` or `$planner` in this chat** (slash/skill command, or they named the planner TDD loop as the thing to run). Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
 
-When this chat is a TDD/planner loop — `.claude/PLAN.md` agreed, user said continue/fix nits, or tester/impl/reviewer-fede already ran — **do not edit production or test files**. Write `.claude/PLAN.md` only, then Task-spawn `tester`, then `impl-low`/`impl-med`/`impl-high`. Ask before pytest. `reviewer-fede` only after green.
+These are **not** entry signals. Implement or answer normally:
 
-Not exceptions: "small nit", "I can land this faster", missing `/planner` prefix.
+- `.claude/PLAN.md` exists from another session
+- the user said "ok", "continue", "land that", "fix the nits"
+- a question or change about the planner/skills/docs
+- missing `/planner` prefix on an ordinary request
 
-Allowed without workers: questions, reading code, git when the user asked, updating `.claude/PLAN.md`.
+Once `/planner` or `$planner` **was** used in this chat: do not edit production or test files. Write `.claude/PLAN.md` only, then Task-spawn `tester`, then `impl-low`/`impl-med`/`impl-high`. Follow-ups in that same chat ("continue", "fix the nits", no prefix) still dispatch. Ask before pytest. `reviewer-fede` only after green.
+
+Allowed without workers even inside a planner chat: questions, reading code, git when the user asked, updating `.claude/PLAN.md`.

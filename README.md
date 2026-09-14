@@ -31,7 +31,7 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 | impl-low | Trivial one-file / mechanical changes. | Haiku 4.5, low, fork | Composer 2.5 | GPT-5.6 Luna, high |
 | impl-med | Standard multi-file features. | Sonnet 5, medium, fork | Grok 4.6 medium | GPT-5.6 Luna, max |
 | impl-high | Cross-cutting or high-risk work. | Sonnet 5, high, fork | Grok 4.6 high | GPT-5.6 Sol, high |
-| reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent | GPT-5.6 Terra, xhigh, read-only sandbox |
+| reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent | GPT-5.6 Sol, medium, read-only sandbox |
 
 Canonical worker text: [`skills/*/SKILL.md`](skills/). Cursor and Codex adapters do not copy it.
 
@@ -53,7 +53,7 @@ Clone this repo, then symlink. Paths assume `$DOTAGENTS="$HOME/Code/dotagents"`.
 git clone git@github.com:fege/dotagents.git "$HOME/Code/dotagents"
 DOTAGENTS="$HOME/Code/dotagents"
 
-mkdir -p "$HOME/.claude/skills" "$HOME/.claude/commands"
+mkdir -p "$HOME/.claude/skills" "$HOME/.claude/commands" "$HOME/.claude/rules"
 
 ln -sfn "$DOTAGENTS/skills/tester"          "$HOME/.claude/skills/tester"
 ln -sfn "$DOTAGENTS/skills/impl-low"        "$HOME/.claude/skills/impl-low"
@@ -61,13 +61,14 @@ ln -sfn "$DOTAGENTS/skills/impl-med"        "$HOME/.claude/skills/impl-med"
 ln -sfn "$DOTAGENTS/skills/impl-high"       "$HOME/.claude/skills/impl-high"
 ln -sfn "$DOTAGENTS/skills/reviewer-fede"   "$HOME/.claude/skills/reviewer-fede"
 ln -sfn "$DOTAGENTS/prompts/planner.md"     "$HOME/.claude/commands/planner.md"
+ln -sfn "$DOTAGENTS/claude/rules/planner-tdd-dispatch.md" "$HOME/.claude/rules/planner-tdd-dispatch.md"
 ```
 
 ### Cursor
 
 ```bash
 DOTAGENTS="$HOME/Code/dotagents"
-mkdir -p "$HOME/.cursor/skills" "$HOME/.cursor/agents"
+mkdir -p "$HOME/.cursor/skills" "$HOME/.cursor/agents" "$HOME/.cursor/rules"
 
 ln -sfn "$DOTAGENTS/cursor/skills/planner"      "$HOME/.cursor/skills/planner"
 ln -sfn "$DOTAGENTS/cursor/agents/tester.md"    "$HOME/.cursor/agents/tester.md"
@@ -75,6 +76,7 @@ ln -sfn "$DOTAGENTS/cursor/agents/impl-low.md"  "$HOME/.cursor/agents/impl-low.m
 ln -sfn "$DOTAGENTS/cursor/agents/impl-med.md"  "$HOME/.cursor/agents/impl-med.md"
 ln -sfn "$DOTAGENTS/cursor/agents/impl-high.md" "$HOME/.cursor/agents/impl-high.md"
 ln -sfn "$DOTAGENTS/cursor/agents/reviewer-fede.md" "$HOME/.cursor/agents/reviewer-fede.md"
+ln -sfn "$DOTAGENTS/cursor/rules/planner-tdd-dispatch.mdc" "$HOME/.cursor/rules/planner-tdd-dispatch.mdc"
 ```
 
 Use Grok 4.6 as the chat model when you run `/planner`. Do not mix Grok 4.5 and 4.6 effort variants in the same session (Composer 2.5 for `impl-low` is a different family and is fine). Cursor also loads `~/.claude/skills/` for compatibility; `/planner` must dispatch via **Task** subagents, not those Claude skill copies.
@@ -95,7 +97,7 @@ cp -f "$DOTAGENTS/codex/agents/impl-high.toml"     "$HOME/.codex/agents/impl-hig
 cp -f "$DOTAGENTS/codex/agents/reviewer-fede.toml" "$HOME/.codex/agents/reviewer-fede.toml"
 ```
 
-Do **not** symlink `skills/tester` (etc.) into `~/.agents/skills`. Codex would load those as in-session skills and skip the one-shot spawn loop. `$planner` must spawn named agents under `~/.codex/agents/`. If spawn cannot take a custom agent name, the planner falls back to a generic `worker` / `explorer` whose prompt points at the canonical `SKILL.md`. Restart Codex after copying. Subagents must stay enabled (`agents.enabled` defaults to true in `~/.codex/config.toml`). Re-copy the TOMLs after you edit `codex/agents/` in this repo.
+Do **not** symlink `skills/tester` (etc.) into `~/.agents/skills`. Codex would load those as in-session skills and skip the one-shot spawn loop. `$planner` must spawn named agents under `~/.codex/agents/`. The planner skill has `allow_implicit_invocation: false` — Codex must not auto-load it; type `$planner`. If spawn cannot take a custom agent name, the planner falls back to a generic `worker` / `explorer` whose prompt points at the canonical `SKILL.md`. Restart Codex after copying. Subagents must stay enabled (`agents.enabled` defaults to true in `~/.codex/config.toml`). Re-copy the TOMLs after you edit `codex/agents/` in this repo.
 
 ## How to use
 
@@ -108,7 +110,7 @@ Typical loop:
 3. On `STATUS: DONE`, it delegates to `impl-low`, `impl-med`, or `impl-high`. When unsure, it picks the lower tier.
 4. After impl, open the worker thread's native file-review UI (inline hunks / Edited files), then tell the planner to comment or proceed. Do not run tests or invoke `reviewer-fede` until you choose proceed.
 5. You run the test command tester returned (planner will ask first). Do not invoke `reviewer-fede` until tests are green.
-6. Planner invokes `reviewer-fede` against the ticket and the diff. After every reviewer return, ask before any fix cycle. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
+6. Planner invokes `reviewer-fede` against the ticket and the diff. After the first review, you decide whether to run tester+impl at all. After those fixes are green, you decide whether to review again — not automatic. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
 
 Skip the full loop when the request is already one worker's job: `/planner review this PR` (or `$planner review this PR`) should brief `reviewer-fede` and stop.
 

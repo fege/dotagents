@@ -1,6 +1,7 @@
 interface:
-  display_name: planner
-  short_description: TDD orchestrator. Plans, then spawns tester / impl-* / reviewer-fede. Does not implement.
+  display_name: "planner"
+  short_description: "TDD orchestrator; invoke with $planner only"
+  default_prompt: "Use $planner to agree a plan, then delegate tester then impl."
 
 policy:
   allow_implicit_invocation: false
