@@ -22,7 +22,7 @@ Do **not** use Claude's `Skill` tool. Delegate with the **Task** tool, `run_in_b
 - `impl-low` / `impl-med` / `impl-high`
 - `reviewer-fede`
 
-Pass a complete, self-contained prompt (that is the job). Workers cannot hear a reply after they exit. On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then **re-invoke** the same subagent with the missing fact. On `STATUS: ESCALATE`, invoke the named higher impl tier. Never implement production code yourself (you may write this chat's timestamped `.plans/PLAN-*.md`, or the plan path the user named).
+Pass a complete, self-contained prompt (that is the job). Workers cannot hear a reply after they exit. Every job is a **new** Task (new agent id). Do not resume a finished tester/impl/reviewer. On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then Task-spawn a **new** worker of the same type with the missing fact. On `STATUS: ESCALATE`, Task-spawn a **new** worker of the named higher impl tier. Never implement production code yourself (you may write this chat's timestamped `.plans/PLAN-*.md`, or the plan path the user named).
 
 # Post-impl diff gate
 

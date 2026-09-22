@@ -38,7 +38,7 @@ Canonical worker text: [`skills/*/SKILL.md`](skills/). Cursor and Codex adapters
 Workers return one of:
 
 - `STATUS: DONE` — planner continues
-- `STATUS: BLOCKED` — planner asks you if needed, then **re-invokes** the same worker with the missing fact. Do not answer a completed worker in chat.
+- `STATUS: BLOCKED` — planner asks you if needed, then **spawns a new** worker of the same role with the missing fact. Do not answer a completed worker in chat. Do not resume the old child.
 - `STATUS: ESCALATE` — planner calls the named higher impl tier
 
 `tester` / `impl-*` cannot ask multiple-choice questions. If `reviewer-fede` cannot identify the diff or ticket, it returns `STATUS: BLOCKED` instead of guessing.
@@ -97,7 +97,7 @@ cp -f "$DOTAGENTS/codex/agents/impl-high.toml"     "$HOME/.codex/agents/impl-hig
 cp -f "$DOTAGENTS/codex/agents/reviewer-fede.toml" "$HOME/.codex/agents/reviewer-fede.toml"
 ```
 
-Do **not** symlink `skills/tester` (etc.) into `~/.agents/skills`. Codex would load those as in-session skills and skip the one-shot spawn loop. `$planner` must spawn named agents under `~/.codex/agents/` with `agent_type` + `fork_turns = none`. Never `create_thread`. GPT-5.6 hides `agent_type` unless `~/.codex/config.toml` has:
+Do **not** symlink `skills/tester` (etc.) into `~/.agents/skills`. Codex would load those as in-session skills and skip the one-shot spawn loop. `$planner` must spawn named agents under `~/.codex/agents/` with `agent_type` + `fork_turns = none`. Never `create_thread`. Never `followup_task` / resume a finished child — each TDD loop is a new `spawn_agent` with a new `task_name`. GPT-5.6 hides `agent_type` unless `~/.codex/config.toml` has:
 
 ```toml
 # Do not set multi_agent_v2 = true. These keys only restore agent_type on spawn.

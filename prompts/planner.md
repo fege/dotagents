@@ -21,7 +21,7 @@ This command applies **only** after the user invoked `/planner` (or `$planner` o
 3. **Converse & Validate:** Present the proposed approach in conversation — ask clarifying questions, surface tradeoffs — and do not write or finalize a plan file until the user explicitly agrees. This is a hard gate, not optional. Once agreed, write the plan under `.plans/` with a unique timestamped name (see **Plan files**), unless the user named an existing plan path to reuse.
 4. **Execute TDD Cycle (Mandatory Sequence via `Skill` Tool):**
 
-   Forked workers (`tester`, `impl-*`) are one-shot. They return `STATUS: DONE`, `STATUS: BLOCKED`, or `STATUS: ESCALATE`. They cannot hear a reply in this conversation. Never answer a completed fork as if it were still running.
+   Forked workers (`tester`, `impl-*`) are one-shot. They return `STATUS: DONE`, `STATUS: BLOCKED`, or `STATUS: ESCALATE`. They cannot hear a reply in this conversation. Never answer a completed fork as if it were still running. Every job is a **new** worker process (new Skill / Task / `spawn_agent`). Do not resume, follow up, or send a second message into a finished child — including comment cycles, BLOCKED retries, and a later TDD loop.
 
    - **Step A — Test First:** Unless the request is purely mechanical (e.g., updating documentation or config files without logic changes), invoke `tester` with a self-contained argument string first. Include the exact plan path if any; missing production code is expected TDD red — write failing tests; do not ask A/B/C. `tester` returns the exact test command on `STATUS: DONE`. Skill/prompt/docs copy is mechanical unless a **machine interface** changes (validator keys, script paths, parser-accepted formats). Do not plan or brief pytest that only asserts phrases still exist in markdown.
    
@@ -39,8 +39,8 @@ This command applies **only** after the user invoked `/planner` (or `$planner` o
 
    **Worker results** (`tester` / `impl-*` during the TDD cycle — not after `reviewer-fede`):
    - `STATUS: DONE` — continue the sequence.
-   - `STATUS: BLOCKED` — resolve the one missing fact (ask the user if needed), then re-invoke the same skill with that fact in the arguments. Do not proceed to the next step.
-   - `STATUS: ESCALATE` — invoke the named higher impl tier with the same brief. Do not retry the lower tier.
+   - `STATUS: BLOCKED` — resolve the one missing fact (ask the user if needed), then spawn a **new** worker of the same role with that fact in the arguments. Do not proceed to the next step. Do not continue the old child.
+   - `STATUS: ESCALATE` — spawn a **new** worker of the named higher impl tier with the same brief. Do not retry the lower tier. Do not continue the old child.
 
    When `reviewer-fede` returns, follow **Post-review gate**. Do not treat that return as a work order.
 
@@ -52,7 +52,7 @@ Send the user to the **child** that wrote the files (`tester` and/or `impl-*`) a
 
 Do not paste `git diff` or file bodies in this chat. Do not summarize what landed — no paths, hunks, or prose recap of the changes. Your parent message is a one-line pointer to open the worker; the worker thread is the review surface. Worker names and ids belong in host adapters.
 
-- **Comment / request changes** — spawn `tester` and/or `impl-*` for what the user picked. Do not implement it yourself. After those workers return, run this gate again — send the user to the **new** child thread. Do not skip.
+- **Comment / request changes** — spawn **new** `tester` and/or `impl-*` children for what the user picked (new Skill / Task / `spawn_agent`, new ids). Do not implement it yourself. Do not resume the previous tester or impl thread. After those workers return, run this gate again — send the user to the **new** child thread. Do not skip.
 - **Proceed** — then Step C (ask to run the test command). If this impl was the first TDD cycle (not a post-review remediations pass), do not invoke `reviewer-fede` until tests are green, then Step D. If it was a remediations pass, after tests are green follow **Post-review gate** — do not auto-invoke Step D.
 - Never treat impl `STATUS: DONE` as permission to run tests or start review.
 
@@ -86,7 +86,7 @@ Within one planner chat, reuse the same file for updates. Pass that exact path i
 
 ## Plan Authority
 
-Code or pseudocode written into the plan file documents intent, not a literal spec to transcribe — it was written before the deep investigation `tester`/`impl-*` will do. Missing production code is expected while `tester` is running; that is not a contradiction. If a sub-skill returns `STATUS: BLOCKED` because the plan is actually wrong, resolve it with the user, update this chat's plan file if needed, and re-invoke.
+Code or pseudocode written into the plan file documents intent, not a literal spec to transcribe — it was written before the deep investigation `tester`/`impl-*` will do. Missing production code is expected while `tester` is running; that is not a contradiction. If a sub-skill returns `STATUS: BLOCKED` because the plan is actually wrong, resolve it with the user, update this chat's plan file if needed, and spawn a **new** worker of the same role.
 
 ## Constraints
 
