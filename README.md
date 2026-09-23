@@ -27,11 +27,11 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 | Piece | Role | Claude Code | Cursor | Codex |
 | --- | --- | --- | --- | --- |
 | Planner | Orchestrator. Agrees a plan, writes `.plans/PLAN-YYYYMMDD-HHMMSS.md`, delegates. Does not implement. | [`prompts/planner.md`](prompts/planner.md) — Sonnet 5, medium, `/planner` command | [`cursor/skills/planner`](cursor/skills/planner/SKILL.md) — inherit chat model, `/planner` skill, Task tool | [`codex/skills/planner`](codex/skills/planner/SKILL.md) — `$planner` skill, spawn named agents |
-| Tester | Failing tests first. Missing production code is expected. | [`skills/tester`](skills/tester/SKILL.md) — Sonnet 5, medium, fork | [`cursor/agents/tester.md`](cursor/agents/tester.md) — Grok 4.6 medium | [`codex/agents/tester.toml`](codex/agents/tester.toml) — GPT-5.6 Luna, max |
-| impl-low | Trivial one-file / mechanical changes. | Haiku 4.5, low, fork | Composer 2.5 | GPT-5.6 Luna, high |
-| impl-med | Standard multi-file features. | Sonnet 5, medium, fork | Grok 4.6 medium | GPT-5.6 Luna, max |
-| impl-high | Cross-cutting or high-risk work. | Sonnet 5, high, fork | Grok 4.6 high | GPT-5.6 Sol, high |
-| reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent | GPT-5.6 Sol, medium, read-only sandbox |
+| Tester | Failing tests first. Missing production code is expected. | [`skills/tester`](skills/tester/SKILL.md) — Sonnet 5, medium, fork | [`cursor/agents/tester.md`](cursor/agents/tester.md) — Grok 4.6 medium | [`codex/agents/tester.toml`](codex/agents/tester.toml) — GPT-6 Luna, max |
+| impl-low | Trivial one-file / mechanical changes. | Haiku 4.5, low, fork | Composer 2.5 | GPT-6 Luna, high |
+| impl-med | Standard multi-file features. | Sonnet 5, medium, fork | Grok 4.6 medium | GPT-6 Luna, max |
+| impl-high | Cross-cutting or high-risk work. | Sonnet 5, high, fork | Grok 4.6 high | GPT-6 Sol, high |
+| reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent | GPT-6 Sol, medium, read-only sandbox |
 
 Canonical worker text: [`skills/*/SKILL.md`](skills/). Cursor and Codex adapters do not copy it.
 
@@ -97,7 +97,7 @@ cp -f "$DOTAGENTS/codex/agents/impl-high.toml"     "$HOME/.codex/agents/impl-hig
 cp -f "$DOTAGENTS/codex/agents/reviewer-fede.toml" "$HOME/.codex/agents/reviewer-fede.toml"
 ```
 
-Do **not** symlink `skills/tester` (etc.) into `~/.agents/skills`. Codex would load those as in-session skills and skip the one-shot spawn loop. `$planner` must spawn named agents under `~/.codex/agents/` with `agent_type` + `fork_turns = none`. Never `create_thread`. Never `followup_task` / resume a finished child — each TDD loop is a new `spawn_agent` with a new `task_name`. GPT-5.6 hides `agent_type` unless `~/.codex/config.toml` has:
+Do **not** symlink `skills/tester` (etc.) into `~/.agents/skills`. Codex would load those as in-session skills and skip the one-shot spawn loop. `$planner` must spawn named agents under `~/.codex/agents/` with `agent_type` + `fork_turns = none`. Never `create_thread`. Never `followup_task` / resume a finished child — each TDD loop is a new `spawn_agent` with a new `task_name`. GPT-6 hides `agent_type` unless `~/.codex/config.toml` has:
 
 ```toml
 # Do not set multi_agent_v2 = true. These keys only restore agent_type on spawn.
