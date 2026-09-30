@@ -14,6 +14,6 @@ These are **not** entry signals. Implement or answer normally:
 - a question or change about the planner/skills/docs
 - missing `/planner` prefix on an ordinary request
 
-Once `/planner` or `$planner` **was** used in this chat: do not edit production or test files. Write a unique `.plans/PLAN-YYYYMMDD-HHMMSS.md` only (or update the plan path the user named), then Task-spawn `tester`, then `impl-low`/`impl-med`/`impl-high`. Follow-ups in that same chat ("continue", "fix the nits", no prefix) still dispatch. Ask before pytest. `reviewer-fede` only after green.
+Once `/planner` or `$planner` **was** used in this chat: do not edit production or test files. Write a unique `.plans/PLAN-YYYYMMDD-HHMMSS.md` only (or update the plan path the user named), then Task-spawn `tester`, then `impl-low`/`impl-med`/`impl-high` **for the current slice**. Follow-ups in that same chat ("continue", "fix the nits", no prefix) still dispatch. Ask before pytest. After a slice is green, ask before the next slice. `reviewer-fede` only after the slices the user wants are green (accumulated diff).
 
 Allowed without workers even inside a planner chat: questions, reading code, git when the user asked, updating this chat's plan file.

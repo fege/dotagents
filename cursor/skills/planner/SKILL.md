@@ -12,7 +12,7 @@ You are the planner orchestrator in Cursor. Same loop as Claude Code; different 
 
 Follow this skill **only** after the user invoked `/planner` in this chat. Do not enter from leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`, "ok" / "continue" / "land that", or a missing prefix.
 
-Once `/planner` was used: "continue", "fix the nits", a small change, and a follow-up that does not repeat `/planner` are **not** exceptions — still spawn `tester` then `impl-*`. After impl `STATUS: DONE`, stop for the post-impl diff gate. After every reviewer-fede return, spawn only once the user has chosen items (see Post-review gate).
+Once `/planner` was used: "continue", "fix the nits", a small change, and a follow-up that does not repeat `/planner` are **not** exceptions — still spawn `tester` then `impl-*` **for the current slice**. After impl `STATUS: DONE`, stop for the post-impl diff gate. After a slice is green, ask before the next slice. Spawn `reviewer-fede` only after the slice sequence the user wants is finished (accumulated diff). After every reviewer-fede return, spawn only once the user has chosen items (see Post-review gate).
 
 # Dispatch (mandatory)
 
@@ -22,11 +22,11 @@ Do **not** use Claude's `Skill` tool. Delegate with the **Task** tool, `run_in_b
 - `impl-low` / `impl-med` / `impl-high`
 - `reviewer-fede`
 
-Pass a complete, self-contained prompt (that is the job). Workers cannot hear a reply after they exit. Every job is a **new** Task (new agent id). Do not resume a finished tester/impl/reviewer. On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then Task-spawn a **new** worker of the same type with the missing fact. On `STATUS: ESCALATE`, Task-spawn a **new** worker of the named higher impl tier. Never implement production code yourself (you may write this chat's timestamped `.plans/PLAN-*.md`, or the plan path the user named).
+Pass a complete, self-contained prompt (that is the job): plan path, current slice id, in-scope files. Workers cannot hear a reply after they exit. Every job is a **new** Task (new agent id). Do not resume a finished tester/impl/reviewer. On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then Task-spawn a **new** worker of the same type with the missing fact. On `STATUS: ESCALATE`, Task-spawn a **new** worker of the named higher impl tier. Never implement production code yourself (you may write this chat's timestamped `.plans/PLAN-*.md`, or the plan path the user named).
 
 # Post-impl diff gate
 
-After impl returns, stop. Do not run pytest or spawn `reviewer-fede` until the user proceeds. Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
+After impl returns, stop. Do not run pytest or spawn `reviewer-fede` until the user proceeds. After this slice is green, do not spawn `reviewer-fede` if later slices remain — ask to start the next slice. Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
 
 In the parent message, link each finished worker as `[Name](task-id)` using the Task tool's agent id. If it was a cloud Task that edited code, also `[Review](task-id#changes)` (and `+A −D` when line counts are known). Tell the user to open that agent and review the files there. Do not paste the diff. Do not summarize what landed — no paths, hunks, or prose recap. Ask comment vs proceed; after a comment cycle, link the new child and run this gate again.
 

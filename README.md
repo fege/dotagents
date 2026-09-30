@@ -5,19 +5,15 @@ Personal TDD loop for [Claude Code](https://code.claude.com/docs/en/skills), [Cu
 Worker **instructions** live once under `skills/`. Claude Code loads those files as skills. Cursor and Codex load thin wrappers (`cursor/`, `codex/`) that pin models and then read the same `SKILL.md` bodies.
 
 ```
-you  -->  /planner or $planner  -->  agree on .plans/PLAN-YYYYMMDD-HHMMSS.md
+you  -->  /planner or $planner  -->  agree on plan + slices
                             |
                             v
-                         tester
+              per slice:  tester  -->  impl-*  -->  you review  -->  tests
+                            |
+                            +-- more slices? ask, then loop
                             |
                             v
-                  impl-low / impl-med / impl-high
-                            |
-                            v
-                    you run the tests
-                            |
-                            v
-                      reviewer-fede
+              reviewer-fede once (accumulated diff vs ticket)
 ```
 
 You can also call `/reviewer-fede` directly. A one-skill request (`review this PR`, `write tests for X`) skips the rest of the loop.
@@ -29,7 +25,7 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 | Planner | Orchestrator. Agrees a plan, writes `.plans/PLAN-YYYYMMDD-HHMMSS.md`, delegates. Does not implement. | [`prompts/planner.md`](prompts/planner.md) — Sonnet 5, medium, `/planner` command | [`cursor/skills/planner`](cursor/skills/planner/SKILL.md) — inherit chat model, `/planner` skill, Task tool | [`codex/skills/planner`](codex/skills/planner/SKILL.md) — `$planner` skill, spawn named agents |
 | Tester | Failing tests first. Missing production code is expected. | [`skills/tester`](skills/tester/SKILL.md) — Sonnet 5, medium, fork | [`cursor/agents/tester.md`](cursor/agents/tester.md) — Grok 4.6 medium | [`codex/agents/tester.toml`](codex/agents/tester.toml) — GPT-6 Luna, max |
 | impl-low | Trivial one-file / mechanical changes. | Haiku 4.5, low, fork | Composer 2.5 | GPT-6 Luna, high |
-| impl-med | Standard multi-file features. | Sonnet 5, medium, fork | Grok 4.6 medium | GPT-6 Luna, max |
+| impl-med | Standard multi-file features (one slice). | Sonnet 5, medium, fork | Grok 4.6 medium | GPT-6 Luna, max |
 | impl-high | Cross-cutting or high-risk work. | Sonnet 5, high, fork | Grok 4.6 high | GPT-6 Sol, high |
 | reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent | GPT-6 Sol, medium, read-only sandbox |
 
@@ -108,7 +104,7 @@ tool_namespace = "agents"
 
 The planner skill has `allow_implicit_invocation: false` — type `$planner`. Fully quit Codex Desktop after copying TOMLs or changing that block. Re-copy the TOMLs after you edit `codex/agents/` in this repo.
 
-Verify spawns with `python3 $DOTAGENTS/codex/scripts/list_sessions.py`. `kind=subagent` plus `agent_role` is a named custom agent. `kind=thread` is a Desktop `create_thread` sibling (wrong model). After a tester spawn, `python3 $DOTAGENTS/codex/scripts/check_spawn.py --role tester` must print `PASS` (`kind=subagent`, luna, `max`).
+Verify spawns with `python3 $DOTAGENTS/codex/scripts/list_sessions.py`. That lists today's rollouts **and** parent threads they point at (the planner root often lives in an earlier day's folder). `kind=subagent` plus `agent_role` is a named custom agent. `kind=root` is the user/planner thread. `kind=thread` is a Desktop `create_thread` sibling (wrong model). `--no-parents` limits the list to that day's folder only. After a tester spawn, `python3 $DOTAGENTS/codex/scripts/check_spawn.py --role tester` must print `PASS`: it reads nick/role/model/effort from that rollout (`kind=subagent`, fields present). It does not parse agent TOMLs.
 
 ## How to use
 
@@ -116,12 +112,12 @@ In a project repo, start Claude Code or Cursor Agent and run `/planner`, or star
 
 Typical loop:
 
-1. Planner investigates and proposes an approach. It does not write `.plans/PLAN-YYYYMMDD-HHMMSS.md` until you agree.
-2. After you agree, it delegates to `tester`. Tests go in first, even if the implementation does not exist yet.
-3. On `STATUS: DONE`, it delegates to `impl-low`, `impl-med`, or `impl-high`. When unsure, it picks the lower tier.
+1. Planner investigates and proposes an approach **and slices** (one reviewable behavior each). It does not write `.plans/PLAN-YYYYMMDD-HHMMSS.md` until you agree. There is no extra slicer agent.
+2. For the **current slice**, it delegates to `tester`. Tests go in first, even if the implementation does not exist yet. Coverage is that slice only.
+3. On `STATUS: DONE`, it delegates to `impl-low`, `impl-med`, or `impl-high` as named on that slice. When unsure, it picks the lower tier. No fourth impl role.
 4. After impl, open the worker thread's native file-review UI (inline hunks / Edited files), then tell the planner to comment or proceed. Do not run tests or invoke `reviewer-fede` until you choose proceed.
-5. You run the test command tester returned (planner will ask first). Do not invoke `reviewer-fede` until tests are green.
-6. Planner invokes `reviewer-fede` against the ticket and the diff. After the first review, you decide whether to run tester+impl at all. After those fixes are green, you decide whether to review again — not automatic. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
+5. You run the test command tester returned (planner will ask first). After this slice is green, the planner asks before starting the next slice. Do not invoke `reviewer-fede` between slices.
+6. When the slices you want in this chat are done, planner invokes `reviewer-fede` once against the ticket and the **accumulated** diff. After the first review, you decide whether to run tester+impl at all. After those fixes are green, you decide whether to review again — not automatic. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
 
 Skip the full loop when the request is already one worker's job: `/planner review this PR` (or `$planner review this PR`) should brief `reviewer-fede` and stop.
 
@@ -130,6 +126,8 @@ Do not invoke `tester` or `impl-*` from the `/` menu in Claude Code (`user-invoc
 ## Plans
 
 Plans live in the **project** repo as `.plans/PLAN-YYYYMMDD-HHMMSS.md` (UTC). Claude Code, Cursor, and Codex share that directory.
+
+The plan file lists ordered slices (id, files, do-not-touch, impl tier, out of scope). One TDD cycle per slice.
 
 A new chat does not resume an old plan. Leftover `PLAN*.md` files are not an entry signal. To continue previous work, invoke `/planner` or `$planner` and name the file:
 

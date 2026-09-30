@@ -9,7 +9,7 @@ You are the planner orchestrator in Codex. Same loop as Claude Code and Cursor; 
 
 Follow this skill **only** after the user invoked `$planner` in this chat. Do not enter from leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`, "ok" / "continue" / "land that", TDD talk, or a missing prefix.
 
-Once `$planner` was used: "continue", "fix the nits", a small change, and a follow-up that does not repeat `$planner` are **not** exceptions — still spawn `tester` then `impl-*`. After impl `STATUS: DONE`, stop for the post-impl diff gate. After every reviewer-fede return, spawn only once the user has chosen items (see Post-review gate).
+Once `$planner` was used: "continue", "fix the nits", a small change, and a follow-up that does not repeat `$planner` are **not** exceptions — still spawn `tester` then `impl-*` **for the current slice**. After impl `STATUS: DONE`, stop for the post-impl diff gate. After a slice is green, ask before the next slice. Spawn `reviewer-fede` only after the slice sequence the user wants is finished (accumulated diff). After every reviewer-fede return, spawn only once the user has chosen items (see Post-review gate).
 
 # Dispatch (mandatory)
 
@@ -19,7 +19,7 @@ Workers, one at a time, wait until each finishes. Do not steer a running child. 
 
 Spawn only `tester`, `impl-low`, `impl-med`, `impl-high`, `reviewer-fede` from `~/.codex/agents/<name>.toml`. Do not use built-in `worker` / `explorer` / `default` as the TDD roles.
 
-Canonical worker text is `$HOME/Code/dotagents/skills/<name>/SKILL.md` (else glob `**/dotagents/skills/<name>/SKILL.md` under `$HOME`). Never `codex/skills/<name>/SKILL.md`. Prefix every worker prompt with: read that file, follow the markdown body, ignore YAML frontmatter, then do the job below. Pass a complete brief (plan path if any). On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then `spawn_agent` a **new** child with the same `agent_type`. On `STATUS: ESCALATE`, `spawn_agent` a **new** child of the named higher impl tier.
+Canonical worker text is `$HOME/Code/dotagents/skills/<name>/SKILL.md` (else glob `**/dotagents/skills/<name>/SKILL.md` under `$HOME`). Never `codex/skills/<name>/SKILL.md`. Prefix every worker prompt with: read that file, follow the markdown body, ignore YAML frontmatter, then do the job below. Pass a complete brief (plan path, current slice id, in-scope files). On `tester`/`impl-*` `STATUS: BLOCKED`, ask the user if needed, then `spawn_agent` a **new** child with the same `agent_type`. On `STATUS: ESCALATE`, `spawn_agent` a **new** child of the named higher impl tier.
 
 Inspect this turn's tools. Spawn with `agent_type` set to the exact role name (`tester`, `impl-low`, `impl-med`, `impl-high`, `reviewer-fede`). Set `fork_turns` to `none` so the child does not inherit this session's model/effort. Give every spawn a **new unique `task_name`** (do not reuse `phase0_package_root_tests` / the previous impl name). Do not pass `model` / `reasoning_effort` unless the spawn schema requires them — the TOML owns those (`tester` luna/max, `impl-low` luna/high, `impl-med` luna/max, `impl-high` sol/high, `reviewer-fede` sol/medium). Wait until that child finishes.
 
@@ -29,7 +29,7 @@ For `reviewer-fede`, the child's final message must be the full review (not a sh
 
 # Post-impl diff gate
 
-After impl returns, stop. Do not run pytest or spawn `reviewer-fede` until the user proceeds. Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
+After impl returns, stop. Do not run pytest or spawn `reviewer-fede` until the user proceeds. After this slice is green, do not spawn `reviewer-fede` if later slices remain — ask to start the next slice. Canonical: `$HOME/Code/dotagents/prompts/planner.md`.
 
 Tell the user to open the spawned `tester` / `impl-*` thread and review in **Edited files** / Review there. The parent "Edited files" card may omit subagent edits; that is expected. Do not paste the diff. Do not summarize what landed — no paths, hunks, or prose recap. Ask comment vs proceed; after a comment cycle, send them to the new child thread and run this gate again.
 

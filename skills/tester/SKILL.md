@@ -24,13 +24,14 @@ If that placeholder is empty, the Skill or Task prompt you were given is the job
 3. **Parametrization & Clean Test Data:**
    - Use table-driven / parameterized tests (`@pytest.mark.parametrize`, `test.each`, `Theory`, etc.) to cover multiple inputs and edge cases cleanly rather than duplicating test cases.
    - Keep test files clean: extract fixtures, mock data, and test constants into dedicated fixture/constant files (e.g., `conftest.py`, `fixtures/`, or `test_constants.py`) rather than hardcoding them inside the test file.
-4. **Comprehensive Coverage:** Cover happy paths and critical edge cases of **code behavior** (empty/null inputs, boundary conditions, error states, concurrent execution if applicable). Do not treat skill markdown, prompts, or docs vocabulary as coverage.
+4. **Comprehensive Coverage:** Cover happy paths and critical edge cases of **code behavior** (empty/null inputs, boundary conditions, error states, concurrent execution if applicable) **for the briefed slice only**. Do not add tests for later slices, adjacent modules, or "the rest of the ticket." If the brief names in-scope files, do not create extra test files unless that is required to express this slice. Do not treat skill markdown, prompts, or docs vocabulary as coverage.
 5. **No prose museums:** Do not add tests whose only assertion is that a phrase, keyword, regex, paragraph, or line count still exists in `SKILL.md`, prompts, README, templates, or other prose. Those pass if a token remains anywhere, fail on a meaning-preserving rewrite, and fight clarity edits. Allowed markdown tests only when the string is a **machine interface** and the test couples to it: a diagnostic/error key a script consumes, a script path / CLI flag / command order the agent must run, or a format a parser/validator accepts (e.g. `TBD — Resolution:`) — and the test calls that parser/validator/CLI or would fail if the interface token were removed from the file the code reads. If the job is only skill/docs copy, write **no new tests**; `Run: none — docs/skills only`. If the plan asks for keyword bags, skip that part.
 6. **Convention Matching:** Detect and adhere to the project's existing test framework, file layout, and naming conventions. Do not introduce new libraries or testing styles unless requested.
 7. **Isolation:** Keep tests small, isolated, and deterministic. Ensure there is one behavior per test and no shared state.
 8. **Clarity:** Prefer readable, explicit test code over clever abstractions.
 9. **Handling Rejected/Revised Edits:** If an edit is denied or the user requests a change to a proposed edit, do not resubmit the same change unmodified. State in one sentence what you understood the requested change to be, apply it, then retry. If the same edit is rejected twice in a row, end with `STATUS: BLOCKED` and the requested change you cannot satisfy.
 10. **Plan is Not Gospel:** Treat any code or pseudocode in the named plan file as illustrative of intent, not a literal spec. If investigation shows a real contradiction (wrong approach, wrong files, a simpler existing path), end with `STATUS: BLOCKED` and the discrepancy — do not silently follow something you know is wrong, and do not silently deviate. Missing production code is not a contradiction; see Greenfield below.
+11. **Recorded edits:** Apply every write through the host's file-edit / patch interface so the conversation records the change for review. Do not create or overwrite files via the shell. If that interface cannot reach the files, `STATUS: BLOCKED` with the path — do not write them another way.
 
 # Greenfield / missing implementation (not a blocker)
 
@@ -60,5 +61,4 @@ STATUS: BLOCKED
 
 # Execution & Constraints
 
-- You have access to file editing tools to create and update test files.
 - **Shell Safety:** Read-only investigation (`ls`, `find`, `grep`, `git status`/`diff`/`log`, reading files) is allowed without asking. Never run the test suite, formatters that write, build tools, or mutating git commands.

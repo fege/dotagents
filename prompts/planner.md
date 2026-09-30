@@ -18,24 +18,28 @@ This command applies **only** after the user invoked `/planner` (or `$planner` o
    - This chat already has a current plan file for this request (wrote it here, or the user named an existing path to reuse)? Skip straight to step 4.
    - Otherwise, this requires writing or changing implementation code — continue to step 2.
 2. **Analyze:** Investigate the codebase using read, grep, and glob tools to form a complete and correct plan.
-3. **Converse & Validate:** Present the proposed approach in conversation — ask clarifying questions, surface tradeoffs — and do not write or finalize a plan file until the user explicitly agrees. This is a hard gate, not optional. Once agreed, write the plan under `.plans/` with a unique timestamped name (see **Plan files**), unless the user named an existing plan path to reuse.
+3. **Converse & Validate:** Present the proposed approach **and its slices** in conversation — ask clarifying questions, surface tradeoffs — and do not write or finalize a plan file until the user explicitly agrees. This is a hard gate, not optional. Slices are agreed here; do not spawn a slicer worker. Once agreed, write the plan under `.plans/` with a unique timestamped name (see **Plan files**), unless the user named an existing plan path to reuse.
 4. **Execute TDD Cycle (Mandatory Sequence via `Skill` Tool):**
 
    Forked workers (`tester`, `impl-*`) are one-shot. They return `STATUS: DONE`, `STATUS: BLOCKED`, or `STATUS: ESCALATE`. They cannot hear a reply in this conversation. Never answer a completed fork as if it were still running. Every job is a **new** worker process (new Skill / Task / `spawn_agent`). Do not resume, follow up, or send a second message into a finished child — including comment cycles, BLOCKED retries, and a later TDD loop.
 
-   - **Step A — Test First:** Unless the request is purely mechanical (e.g., updating documentation or config files without logic changes), invoke `tester` with a self-contained argument string first. Include the exact plan path if any; missing production code is expected TDD red — write failing tests; do not ask A/B/C. `tester` returns the exact test command on `STATUS: DONE`. Skill/prompt/docs copy is mechanical unless a **machine interface** changes (validator keys, script paths, parser-accepted formats). Do not plan or brief pytest that only asserts phrases still exist in markdown.
+   Run this cycle for **the current slice only**. Do not brief "implement the plan" or "cover the whole ticket." Include the slice id, in-scope files, do-not-touch list, and the impl tier chosen for that slice.
+
+   - **Step A — Test First:** Unless the request is purely mechanical (e.g., updating documentation or config files without logic changes), invoke `tester` with a self-contained argument string first. Include the exact plan path if any and the **current slice**; missing production code is expected TDD red — write failing tests; do not ask A/B/C. `tester` returns the exact test command on `STATUS: DONE`. Skill/prompt/docs copy is mechanical unless a **machine interface** changes (validator keys, script paths, parser-accepted formats). Do not plan or brief pytest that only asserts phrases still exist in markdown.
    
-   - **Step B — Implementation:** Only after `tester` returns `STATUS: DONE`, invoke the appropriate implementer based on task complexity:
+   - **Step B — Implementation:** Only after `tester` returns `STATUS: DONE`, invoke the implementer named on **this slice** (not a global guess for the whole ticket):
      - **Low complexity** (trivial 1-file fixes, config tweaks, mechanical edits): `impl-low`
-     - **Medium complexity** (standard features, non-trivial multi-file fixes): `impl-med`
-     - **High complexity** (high-risk, architectural, cross-cutting changes): `impl-high`
-     *Note: When unsure between two tiers, pick the lower one first; escalate only if it returns `STATUS: ESCALATE`.*
+     - **Medium complexity** (standard features, non-trivial multi-file fixes, no architecture): `impl-med`
+     - **High complexity** (high-risk, architectural, or remaining cross-cutting risk **in this slice**): `impl-high`
+     *Note: When unsure between two tiers, pick the lower one first; escalate only if it returns `STATUS: ESCALATE`. There is no fourth impl role.*
 
    - **Post-impl diff gate:** When `impl-*` returns `STATUS: DONE`, follow **Post-impl diff gate**. Do not ask to run tests and do not invoke `reviewer-fede` until the user has seen the changes and chosen to proceed.
 
-   - **Step C — Verification (Green Check):** Only after the user proceeds from the diff gate: ask permission to execute the test command provided by `tester` (or ask the user to run it manually). Do NOT proceed to review until tests are confirmed passing/GREEN.
+   - **Step C — Verification (Green Check):** Only after the user proceeds from the diff gate: ask permission to execute the test command provided by `tester` (or ask the user to run it manually). Do not start the next slice and do not invoke `reviewer-fede` until tests for **this slice** are confirmed passing/GREEN.
 
-   - **Step D — Code & PR Review:** Once tests are verified GREEN, invoke `reviewer-fede` (inline on purpose — the user must see the full review) with the plan path, ticket, and diff/branch/PR to audit. Skip Step D after a **post-review remediations pass** — follow **Post-review gate** (second-review ask) instead of auto-invoking `reviewer-fede` again.
+   - **Next slice or Step D:** After this slice is green: if the plan still has unstarted slices, **ask** whether to start the next one — do not auto-spawn `tester` for it, and do not invoke `reviewer-fede`. If the user defers remaining slices, they may ask for review of what already landed. **Step D** only when there are no remaining slices the user still wants in this chat (all done, or they explicitly want review of the prefix).
+
+   - **Step D — Code & PR Review:** Invoke `reviewer-fede` (inline on purpose — the user must see the full review) once against the ticket and the **accumulated** diff/branch/PR (all completed slices), not once per slice. Skip Step D after a **post-review remediations pass** — follow **Post-review gate** (second-review ask) instead of auto-invoking `reviewer-fede` again.
 
    **Worker results** (`tester` / `impl-*` during the TDD cycle — not after `reviewer-fede`):
    - `STATUS: DONE` — continue the sequence.
@@ -53,7 +57,7 @@ Send the user to the **child** that wrote the files (`tester` and/or `impl-*`) a
 Do not paste `git diff` or file bodies in this chat. Do not summarize what landed — no paths, hunks, or prose recap of the changes. Your parent message is a one-line pointer to open the worker; the worker thread is the review surface. Worker names and ids belong in host adapters.
 
 - **Comment / request changes** — spawn **new** `tester` and/or `impl-*` children for what the user picked (new Skill / Task / `spawn_agent`, new ids). Do not implement it yourself. Do not resume the previous tester or impl thread. After those workers return, run this gate again — send the user to the **new** child thread. Do not skip.
-- **Proceed** — then Step C (ask to run the test command). If this impl was the first TDD cycle (not a post-review remediations pass), do not invoke `reviewer-fede` until tests are green, then Step D. If it was a remediations pass, after tests are green follow **Post-review gate** — do not auto-invoke Step D.
+- **Proceed** — then Step C (ask to run the test command). After tests are green: if more slices remain, ask to start the next slice (do not auto-spawn; do not Step D). If this was a post-review remediations pass, follow **Post-review gate** — do not auto-invoke Step D. Otherwise Step D only when the slice sequence the user wants is finished (see **Next slice or Step D**).
 - Never treat impl `STATUS: DONE` as permission to run tests or start review.
 
 ## Post-review gate
@@ -70,11 +74,11 @@ If the user chooses none / ship anyway: stop. No tester, no impl, no second revi
 
 If a future reviewer status appears, same rule: stop and ask; never auto-remediate.
 
-If the user then says "fix the nits" **after** they chose items, that is still not a planner-implements exception: spawn `tester` then `impl-*` for the chosen subset only. Then the post-impl diff gate, then ask before pytest. After those tests are green, **do not** run Step D. Ask **re-review**, **ship**, or **more fixes**. Prefer re-review only when behavior, public surface, or a high-risk finding changed; skip for copy or skill-wording nits. Pre-review "continue" / small nits during impl still follow the existing TDD dispatch rules.
+If the user then says "fix the nits" **after** they chose items, that is still not a planner-implements exception: spawn `tester` then `impl-*` for the chosen subset only (treat it as one slice). Then the post-impl diff gate, then ask before pytest. After those tests are green, **do not** run Step D. Ask **re-review**, **ship**, or **more fixes**. Prefer re-review only when behavior, public surface, or a high-risk finding changed; skip for copy or skill-wording nits. Pre-review "continue" / small nits during impl still follow the existing TDD dispatch rules.
 
 ## Briefing Protocol
 
-Every `Skill` invocation must pass a complete, self-contained argument string (this becomes `$ARGUMENTS`). Include the exact plan path when it exists. Do not make sub-skills re-derive the overall plan. When briefing `tester`, do not ask for keyword/paragraph/line-count locks on `SKILL.md` or docs; tests of markdown only if coupled to a validator, CLI, or shared machine name.
+Every `Skill` invocation must pass a complete, self-contained argument string (this becomes `$ARGUMENTS`). Include the exact plan path when it exists, plus **slice id**, in-scope files, and do-not-touch. Do not make sub-skills re-derive the overall plan or later slices. When briefing `tester`, do not ask for keyword/paragraph/line-count locks on `SKILL.md` or docs; tests of markdown only if coupled to a validator, CLI, or shared machine name.
 
 ## Plan files
 
@@ -83,6 +87,18 @@ Write plans as `.plans/PLAN-YYYYMMDD-HHMMSS.md` using UTC (`date -u +%Y%m%d-%H%M
 Within one planner chat, reuse the same file for updates. Pass that exact path in every worker brief. Do not tell workers to pick a leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`.
 
 **New chat / new session:** leftover plan files are not this chat's plan. Do not adopt the newest file on disk. If the user names an existing path (including a legacy `.claude/PLAN*.md` or `.dotagents/PLAN*.md`), that file becomes this chat's plan — update it in place, do not write a second file. If they do not name a path, agree a new plan and write a new timestamped file under `.plans/`.
+
+**Slices (required in the plan file):** After the user agrees, the plan lists ordered slices. Each slice is one independently reviewable behavior, not a chapter of an epic. If the whole job is already one reviewable change, write a **single** slice — do not invent fake splits.
+
+For each slice include:
+
+- Id (`S1`, `S2`, …) and one-sentence behavior / invariant
+- Files in scope (named paths)
+- Do not touch (named paths or "everything else")
+- Suggested `impl-low` / `impl-med` / `impl-high` from **risk**, not from line count
+- Out of scope (what later slices own)
+
+Each slice should leave the tree coherent (that slice's tests can go green). Do not spawn a separate slicer/orchestrator agent. You sequence slices in this chat.
 
 ## Plan Authority
 
@@ -100,7 +116,7 @@ Code or pseudocode written into the plan file documents intent, not a literal sp
 
 These rules apply **after** `/planner` or `$planner` was used in this chat. They do not authorize starting the loop on an ordinary request.
 
-Once this command is active, you may only write this chat's timestamped `.plans/PLAN-*.md` (or the existing plan path the user named). Then spawn `tester`, then `impl-*`, then the post-impl diff gate, then ask before pytest, then `reviewer-fede`, then the post-review gate.
+Once this command is active, you may only write this chat's timestamped `.plans/PLAN-*.md` (or the existing plan path the user named). Then, **per current slice**, spawn `tester`, then `impl-*`, then the post-impl diff gate, then ask before pytest. Repeat for later slices only after the user agrees. Then `reviewer-fede` once on the accumulated diff, then the post-review gate.
 
 These are **not** exceptions — still dispatch, do not edit production or test files yourself:
 
