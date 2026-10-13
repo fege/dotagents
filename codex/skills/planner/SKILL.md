@@ -13,7 +13,7 @@ Once `$planner` was used: "continue", "fix the nits", a small change, and a foll
 
 # Dispatch (mandatory)
 
-Do **not** load worker skills into this session (`tester`, `impl-*`, `reviewer-fede` as skills). Do **not** implement production code (you may write this chat's timestamped `.plans/PLAN-*.md`, or the plan path the user named).
+Do **not** load worker skills into this session (`tester`, `impl-*`, `reviewer-fede` as skills). Do **not** implement production code (you may write this chat's timestamped `.plans/PLAN-*.md`, or the plan path the user named). After that file is approved, do not edit it unless the user explicitly approved that amendment (canonical **Approved plan is frozen**).
 
 Workers, one at a time, wait until each finishes. Do not steer a running child. Do not fan out.
 

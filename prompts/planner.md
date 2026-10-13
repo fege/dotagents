@@ -18,7 +18,7 @@ This command applies **only** after the user invoked `/planner` (or `$planner` o
    - This chat already has a current plan file for this request (wrote it here, or the user named an existing path to reuse)? Skip straight to step 4.
    - Otherwise, this requires writing or changing implementation code — continue to step 2.
 2. **Analyze:** Investigate the codebase using read, grep, and glob tools to form a complete and correct plan.
-3. **Converse & Validate:** Present the proposed approach **and its slices** in conversation — ask clarifying questions, surface tradeoffs — and do not write or finalize a plan file until the user explicitly agrees. This is a hard gate, not optional. Slices are agreed here; do not spawn a slicer worker. Once agreed, write the plan under `.plans/` with a unique timestamped name (see **Plan files**), unless the user named an existing plan path to reuse.
+3. **Converse & Validate:** Present the proposed approach **and its slices** in conversation — ask clarifying questions, surface tradeoffs — and do not write or finalize a plan file until the user explicitly agrees. This is a hard gate, not optional. Slices are agreed here; do not spawn a slicer worker. Once agreed, write the plan under `.plans/` with a unique timestamped name (see **Plan files**), unless the user named an existing plan path to reuse. That write is the approved snapshot. After it, follow **Approved plan is frozen**.
 4. **Execute TDD Cycle (Mandatory Sequence via `Skill` Tool):**
 
    Forked workers (`tester`, `impl-*`) are one-shot. They return `STATUS: DONE`, `STATUS: BLOCKED`, or `STATUS: ESCALATE`. They cannot hear a reply in this conversation. Never answer a completed fork as if it were still running. Every job is a **new** worker process (new Skill / Task / `spawn_agent`). Do not resume, follow up, or send a second message into a finished child — including comment cycles, BLOCKED retries, and a later TDD loop.
@@ -84,7 +84,7 @@ Every `Skill` invocation must pass a complete, self-contained argument string (t
 
 Write plans as `.plans/PLAN-YYYYMMDD-HHMMSS.md` using UTC (`date -u +%Y%m%d-%H%M%S`). Example: `.plans/PLAN-20260914-101800.md`. Create `.plans/` if needed. If that path already exists, append `-2`, `-3`, and so on. Never use a fixed `PLAN.md`. Never overwrite another session's plan unless the user named that file to reuse.
 
-Within one planner chat, reuse the same file for updates. Pass that exact path in every worker brief. Do not tell workers to pick a leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`.
+Within one planner chat, reuse the same file path. Pass that exact path in every worker brief. Do not tell workers to pick a leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`. After the approved write, further writes to that file follow **Approved plan is frozen**.
 
 **New chat / new session:** leftover plan files are not this chat's plan. Do not adopt the newest file on disk. If the user names an existing path (including a legacy `.claude/PLAN*.md` or `.dotagents/PLAN*.md`), that file becomes this chat's plan — update it in place, do not write a second file. If they do not name a path, agree a new plan and write a new timestamped file under `.plans/`.
 
@@ -102,7 +102,17 @@ Each slice should leave the tree coherent (that slice's tests can go green). Do 
 
 ## Plan Authority
 
-Code or pseudocode written into the plan file documents intent, not a literal spec to transcribe — it was written before the deep investigation `tester`/`impl-*` will do. Missing production code is expected while `tester` is running; that is not a contradiction. If a sub-skill returns `STATUS: BLOCKED` because the plan is actually wrong, resolve it with the user, update this chat's plan file if needed, and spawn a **new** worker of the same role.
+Code or pseudocode written into the plan file documents intent, not a literal spec to transcribe — it was written before the deep investigation `tester`/`impl-*` will do. Missing production code is expected while `tester` is running; that is not a contradiction. If a sub-skill returns `STATUS: BLOCKED` because the plan is actually wrong, show the discrepancy, propose the plan amendment in chat, and wait for explicit approval before writing the file (see **Approved plan is frozen**). Then spawn a **new** worker of the same role. Do not patch the plan silently so the worker can continue.
+
+## Approved plan is frozen
+
+After the user agrees and the plan file is written (or they named an existing file to reuse **as-is**), that file is frozen. Do not edit it during the TDD loop to "keep it in sync," mark slices done, reslice, retarget files, change impl tier, or rewrite approach.
+
+To change an approved plan: state the proposed edit in conversation (what changes, why). Wait for an explicit yes to **that edit** ("yes, update the plan", "approved", agreeing to the stated amendment). Then write. These are **not** approval to edit the plan: "continue", "proceed", "ok" on a slice, "fix the nits", "land that", starting the next slice, or a worker `STATUS: BLOCKED` / `ESCALATE`.
+
+If they named an existing path at the start of the chat, do not rewrite it until they agree a specific amendment. Reuse the path; do not silently replace its contents.
+
+Progress and slice status live in this chat, not as unsolicited edits to the plan file.
 
 ## Constraints
 
@@ -125,4 +135,4 @@ These are **not** exceptions — still dispatch, do not edit production or test 
 - A follow-up in this planner chat does not repeat `/planner` or `$planner`
 - This chat already agreed a TDD order, or `tester` / `impl-*` / `reviewer-fede` already ran
 
-Allowed without workers: answering questions, reading code, git **when the user asked**, updating this chat's plan file.
+Allowed without workers: answering questions, reading code, git **when the user asked**, updating this chat's plan file **only after the user explicitly approved that specific amendment**.

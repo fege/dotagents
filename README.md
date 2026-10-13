@@ -1,8 +1,8 @@
 # dotagents
 
-Personal TDD loop for [Claude Code](https://code.claude.com/docs/en/skills), [Cursor](https://cursor.com/docs/skills), and [Codex](https://developers.openai.com/codex/skills): plan with the user, write failing tests, implement, then review. The planner never writes production code. Workers are one-shot; they finish the job or return a status. They do not interview you from inside a dead subprocess.
+Personal TDD loop for [Claude Code](https://code.claude.com/docs/en/skills), [Cursor](https://cursor.com/docs/skills), [Codex](https://developers.openai.com/codex/skills), and [OpenCode v2](https://opencode.ai/v2/docs/agents): plan with the user, write failing tests, implement, then review. The planner never writes production code. Workers are one-shot; they finish the job or return a status. They do not interview you from inside a dead subprocess.
 
-Worker **instructions** live once under `skills/`. Claude Code loads those files as skills. Cursor and Codex load thin wrappers (`cursor/`, `codex/`) that pin models and then read the same `SKILL.md` bodies.
+Worker **instructions** live once under `skills/`. Claude Code loads those files as skills. Cursor, Codex, and OpenCode load thin wrappers (`cursor/`, `codex/`, `opencode/`) that pin models and then read the same `SKILL.md` bodies.
 
 ```
 you  -->  /planner or $planner  -->  agree on plan + slices
@@ -29,7 +29,7 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 | impl-high | Cross-cutting or high-risk work. | Sonnet 5, high, fork | Grok 4.6 high | GPT-6 Sol, high |
 | reviewer-fede | Independent review vs ticket and diff. Read-only. | Opus 4.8, medium, 1M, inline | Grok 4.6 xhigh, readonly subagent | GPT-6 Sol, medium, read-only sandbox |
 
-Canonical worker text: [`skills/*/SKILL.md`](skills/). Cursor and Codex adapters do not copy it.
+Canonical worker text: [`skills/*/SKILL.md`](skills/). Cursor, Codex, and OpenCode adapters do not copy it.
 
 Workers return one of:
 
@@ -106,9 +106,78 @@ The planner skill has `allow_implicit_invocation: false` — type `$planner`. Fu
 
 Verify spawns with `python3 $DOTAGENTS/codex/scripts/list_sessions.py`. That lists today's rollouts **and** parent threads they point at (the planner root often lives in an earlier day's folder). `kind=subagent` plus `agent_role` is a named custom agent. `kind=root` is the user/planner thread. `kind=thread` is a Desktop `create_thread` sibling (wrong model). `--no-parents` limits the list to that day's folder only. After a tester spawn, `python3 $DOTAGENTS/codex/scripts/check_spawn.py --role tester` must print `PASS`: it reads nick/role/model/effort from that rollout (`kind=subagent`, fields present). It does not parse agent TOMLs.
 
+### OpenCode v2 (EnMaaS)
+
+The native v2 adapters live in [`opencode/agents`](opencode/agents/) and
+[`opencode/commands`](opencode/commands/). They use the `enmaas` provider already
+configured in your OpenCode profile; they do not add providers or change the
+default model. Validated against OpenCode 2.0.28.
+
+| Agent | Model |
+| --- | --- |
+| planner | Inherits the selected chat model |
+| tester | `enmaas/gpt-6-luna#xhigh` |
+| impl-low | `enmaas/gpt-6-luna#high` |
+| impl-med | `enmaas/gpt-6-luna#xhigh` |
+| impl-high | `enmaas/gpt-6.1-sol#high` |
+| reviewer-fede | `enmaas/gpt-6.1-sol#medium` |
+
+`xhigh` is the highest effort variant exposed by this OpenCode provider, not a
+literal `max` value copied from Codex. Change a wrapper's `model` to another
+registered `enmaas/<model>#<variant>` to change that worker; changing the chat
+model only changes the planner.
+
+Install into the same config directory your CLI and desktop server already use:
+
+```bash
+DOTAGENTS="$HOME/Code/dotagents"
+OPENCODE_CONFIG_DIR="$HOME/.config/opencode-enmaas/opencode"
+export OPENCODE_CONFIG_DIR
+mkdir -p "$OPENCODE_CONFIG_DIR/agents" "$OPENCODE_CONFIG_DIR/commands"
+
+for role in planner tester impl-low impl-med impl-high reviewer-fede; do
+  ln -sfn "$DOTAGENTS/opencode/agents/$role.md" "$OPENCODE_CONFIG_DIR/agents/$role.md"
+done
+ln -sfn "$DOTAGENTS/opencode/commands/planner.md" "$OPENCODE_CONFIG_DIR/commands/planner.md"
+ln -sfn "$DOTAGENTS/opencode/commands/reviewer-fede.md" "$OPENCODE_CONFIG_DIR/commands/reviewer-fede.md"
+```
+
+Do not link the canonical Claude command or worker skills as OpenCode agents:
+their frontmatter and dispatch dialect differ. The OpenCode wrappers read their
+shared bodies and supply native `subagent` dispatch. Every call omits `sessionID`
+and waits in the foreground, so retries and comment cycles create fresh workers.
+
+In the CLI, start `opencode` from the target repo and type `/planner <request>`.
+In desktop, open that repo on the existing EnMaaS server and use the same command.
+For a standalone review use `/reviewer-fede <diff/branch/commit/PR>`, or
+`/planner review <target>`. For noninteractive planner entry:
+
+```bash
+opencode run --agent planner 'Use the dotagents planner workflow to plan <request>.'
+```
+
+The planner inherits the selected model. Workers keep their pinned models.
+Do not select an implementation worker as the main chat agent. Switch back to
+`build` or start a normal new chat to leave the planner workflow.
+
+Safety: native file edits are denied for the reviewer, and the planner can edit
+only `.plans/*.md`. Workers cannot delegate or call the question tool. All these
+agents require shell approval: approve only read-only investigation for workers.
+This is not an OS-level read-only sandbox; never approve a shell command that
+bypasses file restrictions. Tests, builds, formatters, and mutating git remain
+human-gated. A legacy plan can be read as-is, but an amendment outside `.plans/`
+needs a deliberate permission change, not a shell workaround.
+
+After implementation, the planner points to the returned child session for human
+review and waits for comment versus proceed. Use the available desktop
+session/change view, or inspect `git diff` yourself in CLI. Child-session diff
+comment UX is client-dependent; registration alone does not prove it works.
+The reviewer returns the full review for the planner to show before asking
+which findings to address.
+
 ## How to use
 
-In a project repo, start Claude Code or Cursor Agent and run `/planner`, or start Codex and run `$planner`, then describe the work.
+In a project repo, start Claude Code, Cursor Agent, or OpenCode and run `/planner`, or start Codex and run `$planner`, then describe the work.
 
 Typical loop:
 
@@ -125,9 +194,9 @@ Do not invoke `tester` or `impl-*` from the `/` menu in Claude Code (`user-invoc
 
 ## Plans
 
-Plans live in the **project** repo as `.plans/PLAN-YYYYMMDD-HHMMSS.md` (UTC). Claude Code, Cursor, and Codex share that directory.
+Plans live in the **project** repo as `.plans/PLAN-YYYYMMDD-HHMMSS.md` (UTC). Claude Code, Cursor, Codex, and OpenCode share that directory.
 
-The plan file lists ordered slices (id, files, do-not-touch, impl tier, out of scope). One TDD cycle per slice.
+The plan file lists ordered slices (id, files, do-not-touch, impl tier, out of scope). One TDD cycle per slice. After you agree, that file is **frozen**. The planner must not rewrite it mid-loop (reslice, retarget files, mark slices done). A later edit needs an explicit yes to that amendment — "continue" / "proceed" / next slice is not enough.
 
 A new chat does not resume an old plan. Leftover `PLAN*.md` files are not an entry signal. To continue previous work, invoke `/planner` or `$planner` and name the file:
 
@@ -135,4 +204,4 @@ A new chat does not resume an old plan. Leftover `PLAN*.md` files are not an ent
 /planner use .plans/PLAN-20260914-101800.md
 ```
 
-The planner then updates that file in place and briefs workers with that path. If you do not name a path, it agrees a new plan and writes a new timestamped file. Legacy `.claude/PLAN*.md` or `.dotagents/PLAN*.md` files can be named the same way.
+That path is reused as-is until you approve a specific change. If you do not name a path, it agrees a new plan and writes a new timestamped file. Legacy `.claude/PLAN*.md` or `.dotagents/PLAN*.md` files can be named the same way.
