@@ -168,10 +168,25 @@ bypasses file restrictions. Tests, builds, formatters, and mutating git remain
 human-gated. A legacy plan can be read as-is, but an amendment outside `.plans/`
 needs a deliberate permission change, not a shell workaround.
 
-After implementation, the planner points to the returned child session for human
-review and waits for comment versus proceed. Use the available desktop
-session/change view, or inspect `git diff` yourself in CLI. Child-session diff
-comment UX is client-dependent; registration alone does not prove it works.
+For OpenCode post-implementation review, anchor the handoff to the parent user
+message that dispatched the workers, not the newest/“Last turn” after later chat.
+Track the parent session ID, dispatch-turn message ID, and returned tester and
+implementation child session IDs (and actual native links, if provided) as
+workflow state, using fresh child IDs/links for each retry/comment cycle; do not
+edit a frozen plan to store them. When the IDs and a recorded snapshot are
+available, the planner may inspect the accumulated parent snapshot diff for that
+dispatch turn with
+`GET /api/session/{parentID}/diff?from={dispatchMessageID}` read-only. Snapshot
+capture is best-effort and location-dependent; an API diff does not prove that
+child edits appear in a desktop parent-turn change view. Point to that native view
+only if the client exposes that specific turn and its relevant content is
+verified. Otherwise point to both child sessions and have the user inspect the
+working-tree diff. Keep feedback in the parent chat: no automatic forwarding of
+child inline comments is established. The planner may inspect accessible
+submitted child messages/inbox read-only; if feedback is not available there,
+ask the user to paste or forward it into the parent. Preserve the human
+comment-versus-proceed gate.
+
 The reviewer returns the full review for the planner to show before asking
 which findings to address.
 

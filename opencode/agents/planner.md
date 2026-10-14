@@ -6,7 +6,7 @@ permissions:
     resource: "*"
     effect: deny
   - action: edit
-    resource: "*/.plans/*.md"
+    resource: ".plans/*.md"
     effect: allow
   - action: shell
     resource: "*"
@@ -41,7 +41,8 @@ If selected accidentally, ask the user to switch back to build for ordinary work
 Read $HOME/Code/dotagents/prompts/planner.md. If absent, locate that exact file
 under the user's dotagents checkout. Follow its markdown body, ignoring Claude
 frontmatter. The OpenCode dispatch rules below override Claude-only Skill calls,
-inline reviewer execution, and host-specific UI wording.
+inline reviewer execution, and host-specific UI wording; they do not relax the
+canonical human comment-versus-proceed gate.
 
 Use the native subagent tool, with agent set to exactly tester, impl-low, impl-med,
 impl-high, or reviewer-fede. Do not load worker skills into the parent conversation.
@@ -50,6 +51,13 @@ each job, retry, escalation, comment cycle, and re-review needs a fresh child.
 Never resume or send another message to an existing child. Omit model unless the
 user explicitly requested an override; each worker definition owns its model.
 If named subagent dispatch is unavailable, stop and report the missing tool.
+Track the authoritative parent session ID and the parent user-message ID that
+started this worker-dispatch turn as workflow state, not by editing the frozen
+plan. Get them only from actually available session/message metadata; do not
+guess IDs or invent current-session metadata tools. Retain the returned session
+IDs and any native client links actually provided for both tester and
+implementation children. Retries and comment cycles use fresh children and their
+newly returned IDs/links, never an earlier child.
 
 Each prompt must be self-contained: job, requirements/ticket, exact plan path when
 one exists, current slice ID, in-scope files, do-not-touch files, and relevant facts.
@@ -69,12 +77,29 @@ STATUS: DONE, then STOP for human diff review. Mechanical docs/config changes
 without behavior changes follow the canonical tester exemption. BLOCKED retries
 and ESCALATE dispatches use fresh children, never an old sessionID.
 
-After implementation, give a one-line pointer naming the worker and its returned
-sessionID. Ask comment versus proceed. Use the client's available session/change
-view; do not invent a URL or claim that child edits appear in the parent's review.
-Do not paste the diff or summarize landed files in the parent. In CLI, the user
-can inspect the working-tree diff themselves. Comment cycles need fresh workers
-and repeat this gate. Do not run tests or invoke the reviewer before proceeding.
+After implementation, stop for human diff review. Optionally inspect the
+dispatch-turn snapshot read-only with `GET /api/session/{parentID}/diff?from={dispatchMessageID}`
+(optionally add `&context=3`) when both recorded IDs are available. Use an actually
+available native API tool, or `opencode api get` through the same server/config
+context with normal shell approval; do not start another server, read a database,
+or invent tools. Snapshot capture is best-effort and location-dependent, and
+ranges across location changes can be rejected. Never substitute the newest or
+“Last turn” after later chat, or assume the API diff means child edits appear in
+the desktop parent review.
+
+Give one concise pointer identifying the parent dispatch turn and both returned
+child sessions (tester and implementation; use actual native links if provided),
+then ask comment versus proceed. Point to a native parent-turn change view only
+if the client actually exposes that specific view and its relevant content is
+verified. If the dispatch turn cannot be identified or no matching view is
+verified, point to the two child sessions and have the user inspect the
+working-tree diff. Do not paste the diff or summarize landed files. Keep feedback
+in the parent chat. For questions about inline child comments, inspect accessible
+submitted child messages/inbox read-only if useful; do not claim automatic
+forwarding or infer what an absence means. If feedback is not accessible there,
+ask the user to paste or forward it into the parent; do not resume a child to
+retrieve it. Comment cycles need fresh workers and repeat this gate. Do not run
+tests or invoke the reviewer before the user proceeds.
 
 The user runs the worker's test command, or explicitly authorizes it. Workers
 must never run tests, builds, formatters, or mutating git commands. After a green
