@@ -1,7 +1,7 @@
 ---
 description: Standard multi-file implementation for one approved slice. Escalates to impl-high.
 mode: subagent
-model: enmaas/gpt-6-luna#xhigh
+model: enmaas/rits/zai-org/glm-5-3#high
 permissions:
   - action: subagent
     resource: "*"

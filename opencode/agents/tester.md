@@ -1,7 +1,7 @@
 ---
 description: Test-first worker for one approved slice. Writes tests, never runs them.
 mode: subagent
-model: enmaas/gpt-6-luna#xhigh
+model: enmaas/gpt-6.1-sol#medium
 permissions:
   - action: subagent
     resource: "*"

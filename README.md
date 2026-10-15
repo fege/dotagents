@@ -116,16 +116,23 @@ default model. Validated against OpenCode 2.0.28.
 | Agent | Model |
 | --- | --- |
 | planner | Inherits the selected chat model |
-| tester | `enmaas/gpt-6-luna#xhigh` |
-| impl-low | `enmaas/gpt-6-luna#high` |
-| impl-med | `enmaas/gpt-6-luna#xhigh` |
+| tester | `enmaas/gpt-6.1-sol#medium` |
+| impl-low | `enmaas/gpt-6-luna#low` |
+| impl-med | `enmaas/rits/zai-org/glm-5-3#high` |
 | impl-high | `enmaas/gpt-6.1-sol#high` |
-| reviewer-fede | `enmaas/gpt-6.1-sol#medium` |
+| reviewer-fede | `enmaas/gpt-6.1-sol#high` |
 
-`xhigh` is the highest effort variant exposed by this OpenCode provider, not a
-literal `max` value copied from Codex. Change a wrapper's `model` to another
-registered `enmaas/<model>#<variant>` to change that worker; changing the chat
-model only changes the planner.
+For the planner, prefer Sol 6.1 at medium effort; use high for difficult
+decomposition or architecture.
+GLM 5.3 at high effort is a trial for bounded, test-guided implementation; expect
+slower responses and evaluate correctness, instruction-following, and retries.
+
+Change a wrapper's `model` to another registered `enmaas/<model>#<variant>` to
+change that worker; changing the chat model only changes the planner. Use only
+variants exposed by the provider, rather than copying effort names from Codex.
+Exceptional, explicitly requested overrides are `enmaas/gpt-6-astra#xhigh` when
+Sol cannot solve an important problem and `enmaas/claude-opus-5-5#xhigh` for
+security-focused reviews; neither adds an automatic workflow stage.
 
 Install into the same config directory your CLI and desktop server already use:
 

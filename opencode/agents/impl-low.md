@@ -1,7 +1,7 @@
 ---
 description: Trivial one-file or mechanical implementation. Escalates to impl-med or impl-high.
 mode: subagent
-model: enmaas/gpt-6-luna#high
+model: enmaas/gpt-6-luna#low
 permissions:
   - action: subagent
     resource: "*"

@@ -1,7 +1,7 @@
 ---
 description: Independent first-principles review of actual requirements and diff. No file edits.
 mode: subagent
-model: enmaas/gpt-6.1-sol#medium
+model: enmaas/gpt-6.1-sol#high
 permissions:
   - action: "*"
     resource: "*"
