@@ -5,7 +5,10 @@ Personal TDD loop for [Claude Code](https://code.claude.com/docs/en/skills), [Cu
 Worker **instructions** live once under `skills/`. Claude Code loads those files as skills. Cursor, Codex, and OpenCode load thin wrappers (`cursor/`, `codex/`, `opencode/`) that pin models and then read the same `SKILL.md` bodies.
 
 ```
-you  -->  /planner or $planner  -->  agree on plan + slices
+you  -->  /planner or $planner  -->  agree on approach
+                            |
+                            v
+                     write the plan file  -->  you review the plan
                             |
                             v
               per slice:  tester  -->  impl-*  -->  you review  -->  tests
@@ -22,7 +25,7 @@ You can also call `/reviewer-fede` directly. A one-skill request (`review this P
 
 | Piece | Role | Claude Code | Cursor | Codex |
 | --- | --- | --- | --- | --- |
-| Planner | Orchestrator. Agrees a plan, writes `.plans/PLAN-YYYYMMDD-HHMMSS.md`, delegates. Does not implement. | [`prompts/planner.md`](prompts/planner.md) — Sonnet 5, medium, `/planner` command | [`cursor/skills/planner`](cursor/skills/planner/SKILL.md) — inherit chat model, `/planner` skill, Task tool | [`codex/skills/planner`](codex/skills/planner/SKILL.md) — `$planner` skill, spawn named agents |
+| Planner | Orchestrator. Agrees an approach, writes `.plans/PLAN-YYYYMMDD-HHMMSS.md`, waits for you to review that file, then delegates. Does not implement. | [`prompts/planner.md`](prompts/planner.md) — Sonnet 5, medium, `/planner` command | [`cursor/skills/planner`](cursor/skills/planner/SKILL.md) — inherit chat model, `/planner` skill, Task tool | [`codex/skills/planner`](codex/skills/planner/SKILL.md) — `$planner` skill, spawn named agents |
 | Tester | Failing tests first. Missing production code is expected. | [`skills/tester`](skills/tester/SKILL.md) — Sonnet 5, medium, fork | [`cursor/agents/tester.md`](cursor/agents/tester.md) — Grok 4.6 medium | [`codex/agents/tester.toml`](codex/agents/tester.toml) — GPT-6 Luna, max |
 | impl-low | Trivial one-file / mechanical changes. | Haiku 4.5, low, fork | Composer 2.5 | GPT-6 Luna, high |
 | impl-med | Standard multi-file features (one slice). | Sonnet 5, medium, fork | Grok 4.6 medium | GPT-6 Luna, max |
@@ -204,11 +207,12 @@ In a project repo, start Claude Code, Cursor Agent, or OpenCode and run `/planne
 Typical loop:
 
 1. Planner investigates and proposes an approach **and slices** (one reviewable behavior each). It does not write `.plans/PLAN-YYYYMMDD-HHMMSS.md` until you agree. There is no extra slicer agent.
-2. For the **current slice**, it delegates to `tester`. Tests go in first, even if the implementation does not exist yet. Coverage is that slice only.
-3. On `STATUS: DONE`, it delegates to `impl-low`, `impl-med`, or `impl-high` as named on that slice. When unsure, it picks the lower tier. No fourth impl role.
-4. After impl, open the worker thread's native file-review UI (inline hunks / Edited files), then tell the planner to comment or proceed. Do not run tests or invoke `reviewer-fede` until you choose proceed.
-5. You run the test command tester returned (planner will ask first). After this slice is green, the planner asks before starting the next slice. Do not invoke `reviewer-fede` between slices.
-6. When the slices you want in this chat are done, planner invokes `reviewer-fede` once against the ticket and the **accumulated** diff. After the first review, you decide whether to run tester+impl at all. After those fixes are green, you decide whether to review again — not automatic. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
+2. After you agree, it writes that file and stops. You review the file. It does not start S1 — no `tester`, no `impl-*` — until you approve the written plan and say to start. "ok" / "continue" do not count. Edits you ask for get written, then it asks again.
+3. For the **current slice**, it delegates to `tester`. Tests go in first, even if the implementation does not exist yet. Coverage is that slice only.
+4. On `STATUS: DONE`, it delegates to `impl-low`, `impl-med`, or `impl-high` as named on that slice. When unsure, it picks the lower tier. No fourth impl role.
+5. After impl, open the worker thread's native file-review UI (inline hunks / Edited files), then tell the planner to comment or proceed. Do not run tests or invoke `reviewer-fede` until you choose proceed.
+6. You run the test command tester returned (planner will ask first). After this slice is green, the planner asks before starting the next slice. Do not invoke `reviewer-fede` between slices.
+7. When the slices you want in this chat are done, planner invokes `reviewer-fede` once against the ticket and the **accumulated** diff. After the first review, you decide whether to run tester+impl at all. After those fixes are green, you decide whether to review again — not automatic. Verdict is `BLOCK` or `SHIP-WITH-NITS`.
 
 Skip the full loop when the request is already one worker's job: `/planner review this PR` (or `$planner review this PR`) should brief `reviewer-fede` and stop.
 
@@ -218,7 +222,7 @@ Do not invoke `tester` or `impl-*` from the `/` menu in Claude Code (`user-invoc
 
 Plans live in the **project** repo as `.plans/PLAN-YYYYMMDD-HHMMSS.md` (UTC). Claude Code, Cursor, Codex, and OpenCode share that directory.
 
-The plan file lists ordered slices (id, files, do-not-touch, impl tier, out of scope). One TDD cycle per slice. After you agree, that file is **frozen**. The planner must not rewrite it mid-loop (reslice, retarget files, mark slices done). A later edit needs an explicit yes to that amendment — "continue" / "proceed" / next slice is not enough.
+The plan file lists ordered slices (id, files, do-not-touch, impl tier, out of scope). One TDD cycle per slice. After you approve the written file, that file is **frozen**. Agreeing the approach only authorizes the write. The planner must not rewrite a frozen plan mid-loop (reslice, retarget files, mark slices done). A later edit needs an explicit yes to that amendment — "continue" / "proceed" / next slice is not enough.
 
 A new chat does not resume an old plan. Leftover `PLAN*.md` files are not an entry signal. To continue previous work, invoke `/planner` or `$planner` and name the file:
 
@@ -226,4 +230,4 @@ A new chat does not resume an old plan. Leftover `PLAN*.md` files are not an ent
 /planner use .plans/PLAN-20260914-101800.md
 ```
 
-That path is reused as-is until you approve a specific change. If you do not name a path, it agrees a new plan and writes a new timestamped file. Legacy `.claude/PLAN*.md` or `.dotagents/PLAN*.md` files can be named the same way.
+That path is reused as-is until you approve a specific change. If you do not name a path, it agrees a new plan, writes a new timestamped file, and waits for you to review it before S1. Legacy `.claude/PLAN*.md` or `.dotagents/PLAN*.md` files can be named the same way.

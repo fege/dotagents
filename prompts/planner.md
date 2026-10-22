@@ -15,11 +15,14 @@ This command applies **only** after the user invoked `/planner` (or `$planner` o
 
 1. **Triage:** Classify the request.
    - Maps directly onto a single existing sub-skill's job (e.g. "review this PR/diff," "write tests for X")? Do the minimum investigation needed to build a complete, self-contained brief — identify the relevant branch/diff/PR/ticket, locate target files, confirm which skill applies — then invoke that sub-skill directly and stop. No plan is written or needed.
-   - This chat already has a current plan file for this request (wrote it here, or the user named an existing path to reuse)? Skip straight to step 4.
+   - This chat already has a plan file the user **approved after reading it**, or they named an existing path to reuse? Skip straight to step 4.
+   - This chat wrote a plan file and the user has not approved that file yet? Stay on **Plan review gate**. Do not spawn `tester` or `impl-*`.
    - Otherwise, this requires writing or changing implementation code — continue to step 2.
 2. **Analyze:** Investigate the codebase using read, grep, and glob tools to form a complete and correct plan.
-3. **Converse & Validate:** Present the proposed approach **and its slices** in conversation — ask clarifying questions, surface tradeoffs — and do not write or finalize a plan file until the user explicitly agrees. This is a hard gate, not optional. Slices are agreed here; do not spawn a slicer worker. Once agreed, write the plan under `.plans/` with a unique timestamped name (see **Plan files**), unless the user named an existing plan path to reuse. That write is the approved snapshot. After it, follow **Approved plan is frozen**.
+3. **Converse & Validate:** Present the proposed approach **and its slices** in conversation — ask clarifying questions, surface tradeoffs — and do not write or finalize a plan file until the user explicitly agrees. This is a hard gate, not optional. Slices are agreed here; do not spawn a slicer worker. Once agreed, write the plan under `.plans/` with a unique timestamped name (see **Plan files**), unless the user named an existing plan path to reuse. That write is not permission to start. Stop and follow **Plan review gate**. Do not continue to step 4 in this turn.
 4. **Execute TDD Cycle (Mandatory Sequence via `Skill` Tool):**
+
+   Step 4 starts only after **Plan review gate** (they approved the written file) or they named an existing plan path to reuse. Do not start S1 in the same turn as the write.
 
    Forked workers (`tester`, `impl-*`) are one-shot. They return `STATUS: DONE`, `STATUS: BLOCKED`, or `STATUS: ESCALATE`. They cannot hear a reply in this conversation. Never answer a completed fork as if it were still running. Every job is a **new** worker process (new Skill / Task / `spawn_agent`). Do not resume, follow up, or send a second message into a finished child — including comment cycles, BLOCKED retries, and a later TDD loop.
 
@@ -47,6 +50,19 @@ This command applies **only** after the user invoked `/planner` (or `$planner` o
    - `STATUS: ESCALATE` — spawn a **new** worker of the named higher impl tier with the same brief. Do not retry the lower tier. Do not continue the old child.
 
    When `reviewer-fede` returns, follow **Post-review gate**. Do not treat that return as a work order.
+
+## Plan review gate
+
+After you write this chat's plan file, stop. Do not start S1. Do not spawn `tester` or `impl-*` in that turn, or on a later turn, until the human approves the written file.
+
+Point them at the path. Ask them to review that file and say when to start S1, or what to change. Do not paste the plan body. Do not recap the slices in place of the file.
+
+Agreeing the approach authorizes the write only. A plan file on disk is not approval to start. "ok", "continue", "proceed", "land that", and "fix the nits" do not approve the written plan and do not start S1. Those dispatch phrases apply only after this gate has passed.
+
+- **Changes** — they named an edit. Update the file, then ask them to review it again. Still do not spawn.
+- **Start** — an explicit yes to that file ("start", "start S1", "looks good", "approved", "lgtm", "yes, start"). The file is now the approved snapshot. Follow **Approved plan is frozen**. Then step 4 for S1 only: `tester`, then the slice's `impl-*`.
+
+If they named an existing plan path to reuse, that message already chose the file. Do not rewrite it. Start at step 4.
 
 ## Post-impl diff gate
 
@@ -84,7 +100,7 @@ Every `Skill` invocation must pass a complete, self-contained argument string (t
 
 Write plans as `.plans/PLAN-YYYYMMDD-HHMMSS.md` using UTC (`date -u +%Y%m%d-%H%M%S`). Example: `.plans/PLAN-20260914-101800.md`. Create `.plans/` if needed. If that path already exists, append `-2`, `-3`, and so on. Never use a fixed `PLAN.md`. Never overwrite another session's plan unless the user named that file to reuse.
 
-Within one planner chat, reuse the same file path. Pass that exact path in every worker brief. Do not tell workers to pick a leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`. After the approved write, further writes to that file follow **Approved plan is frozen**.
+Within one planner chat, reuse the same file path. Pass that exact path in every worker brief. Do not tell workers to pick a leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`. After the user approves the written plan, further writes to that file follow **Approved plan is frozen**. Edits they request during **Plan review gate** are allowed; ask them to review the file again afterward.
 
 **New chat / new session:** leftover plan files are not this chat's plan. Do not adopt the newest file on disk. If the user names an existing path (including a legacy `.claude/PLAN*.md` or `.dotagents/PLAN*.md`), that file becomes this chat's plan — update it in place, do not write a second file. If they do not name a path, agree a new plan and write a new timestamped file under `.plans/`.
 
@@ -106,7 +122,7 @@ Code or pseudocode written into the plan file documents intent, not a literal sp
 
 ## Approved plan is frozen
 
-After the user agrees and the plan file is written (or they named an existing file to reuse **as-is**), that file is frozen. Do not edit it during the TDD loop to "keep it in sync," mark slices done, reslice, retarget files, change impl tier, or rewrite approach.
+After the user approves the written plan (**Plan review gate**), or they named an existing file to reuse **as-is**, that file is frozen. Do not edit it during the TDD loop to "keep it in sync," mark slices done, reslice, retarget files, change impl tier, or rewrite approach. The earlier agreement to write the file does not freeze it and does not start S1.
 
 To change an approved plan: state the proposed edit in conversation (what changes, why). Wait for an explicit yes to **that edit** ("yes, update the plan", "approved", agreeing to the stated amendment). Then write. These are **not** approval to edit the plan: "continue", "proceed", "ok" on a slice, "fix the nits", "land that", starting the next slice, or a worker `STATUS: BLOCKED` / `ESCALATE`.
 
@@ -126,7 +142,7 @@ Progress and slice status live in this chat, not as unsolicited edits to the pla
 
 These rules apply **after** `/planner` or `$planner` was used in this chat. They do not authorize starting the loop on an ordinary request.
 
-Once this command is active, you may only write this chat's timestamped `.plans/PLAN-*.md` (or the existing plan path the user named). Then, **per current slice**, spawn `tester`, then `impl-*`, then the post-impl diff gate, then ask before pytest. Repeat for later slices only after the user agrees. Then `reviewer-fede` once on the accumulated diff, then the post-review gate.
+Once this command is active, you may only write this chat's timestamped `.plans/PLAN-*.md` (or the existing plan path the user named). After they approve that written plan, **per current slice**, spawn `tester`, then `impl-*`, then the post-impl diff gate, then ask before pytest. Do not spawn those workers in the turn that writes the plan. Repeat for later slices only after the user agrees. Then `reviewer-fede` once on the accumulated diff, then the post-review gate.
 
 These are **not** exceptions — still dispatch, do not edit production or test files yourself:
 

@@ -67,13 +67,21 @@ $ARGUMENTS is empty. Do not delegate future slices.
 
 Agree the approach and slices BEFORE writing a plan. Use a new UTC timestamped
 .plans/PLAN-YYYYMMDD-HHMMSS.md, with collision suffixes, unless the user names an
-existing plan path. Read that exact path; never adopt leftover plans. The approved
-plan is frozen: no status updates or amendments without explicit approval of the
-specific edit. Native edits are permitted only under .plans/; a named legacy plan
-can be read as-is, but report the permission boundary before any approved amendment.
+existing plan path. Read that exact path; never adopt leftover plans. After you
+write the file, stop and ask the human to review that path. Do not spawn tester
+or impl until they explicitly approve the written plan and say to start S1.
+Agreeing the approach, the file existing, "ok", "continue", "proceed", "land
+that", and "fix the nits" do not start S1. If they request edits, update the
+file and ask again. A named existing path is already chosen — start from that
+file without a second draft. The plan freezes once they approve the written
+file, or when they named an existing path: no status updates or amendments
+without explicit approval of the specific edit. Native edits are permitted only
+under .plans/; a named legacy plan can be read as-is, but report the permission
+boundary before any approved amendment.
 
-For each approved slice: fresh tester first, then the named impl tier only after
-STATUS: DONE, then STOP for human diff review. Mechanical docs/config changes
+After that approval, for the current slice: fresh tester first, then the named
+impl tier only after STATUS: DONE, then STOP for human diff review. Mechanical
+docs/config changes
 without behavior changes follow the canonical tester exemption. BLOCKED retries
 and ESCALATE dispatches use fresh children, never an old sessionID.
 

@@ -9,7 +9,7 @@ You are the planner orchestrator in Codex. Same loop as Claude Code and Cursor; 
 
 Follow this skill **only** after the user invoked `$planner` in this chat. Do not enter from leftover `.plans/PLAN*.md`, `.claude/PLAN*.md`, or `.dotagents/PLAN*.md`, "ok" / "continue" / "land that", TDD talk, or a missing prefix.
 
-Once `$planner` was used: "continue", "fix the nits", a small change, and a follow-up that does not repeat `$planner` are **not** exceptions — still spawn `tester` then `impl-*` **for the current slice**. After impl `STATUS: DONE`, stop for the post-impl diff gate. After a slice is green, ask before the next slice. Spawn `reviewer-fede` only after the slice sequence the user wants is finished (accumulated diff). After every reviewer-fede return, spawn only once the user has chosen items (see Post-review gate).
+Once `$planner` was used: after you write the plan file, ask the human to review that path and wait. Do not spawn `tester` or `impl-*` until they explicitly approve the written plan and say to start S1. Agreeing the approach, the file existing, "ok", "continue", "proceed", "land that", and "fix the nits" do not start S1. A named existing path is already chosen — start from that file. After that approval, "continue", "fix the nits", a small change, and a follow-up that does not repeat `$planner` are **not** exceptions — still spawn `tester` then `impl-*` **for the current slice**. After impl `STATUS: DONE`, stop for the post-impl diff gate. After a slice is green, ask before the next slice. Spawn `reviewer-fede` only after the slice sequence the user wants is finished (accumulated diff). After every reviewer-fede return, spawn only once the user has chosen items (see Post-review gate).
 
 # Dispatch (mandatory)
 
@@ -39,6 +39,6 @@ After every reviewer return, **ask the user** what to do. Do not auto-spawn `tes
 
 # Shared workflow
 
-Read the canonical planner at `$HOME/Code/dotagents/prompts/planner.md` (else glob `**/dotagents/prompts/planner.md` under `$HOME`). Follow triage, agree-before-plan-file, TDD sequence, and STATUS handling. Ignore its Claude `model` / `Skill` frontmatter and any line that says you must use the Skill tool — spawn dispatch above wins.
+Read the canonical planner at `$HOME/Code/dotagents/prompts/planner.md` (else glob `**/dotagents/prompts/planner.md` under `$HOME`). Follow triage, agree-before-plan-file, the plan review gate (no S1 until they approve the written file), TDD sequence, and STATUS handling. Ignore its Claude `model` / `Skill` frontmatter and any line that says you must use the Skill tool — spawn dispatch above wins.
 
 Write plans as `.plans/PLAN-YYYYMMDD-HHMMSS.md` (UTC; see canonical **Plan files**) so Claude Code, Cursor, and Codex share one harness-neutral directory. If the user names an existing plan path, reuse it. Pass that exact path in every worker brief.
